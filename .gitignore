@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+data/browser_state/
+!data/browser_state/.gitkeep
+data/jobs.db
+.vscode/
+.idea/
+

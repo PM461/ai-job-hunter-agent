@@ -1,0 +1,330 @@
+{
+  "Banca Sella": {
+    "type": "workday",
+    "mapped_url": "https://sellagroup.wd3.myworkdayjobs.com/it-IT/ID01",
+    "notes": "Workday ATS Gruppo Sella"
+  },
+  "Amazon Italy": {
+    "type": "amazon_portal",
+    "mapped_url": "https://amazon.jobs/content/en/locations/italy",
+    "notes": "Amazon Jobs Italia & Lab Italia"
+  },
+  "Intesa Sanpaolo": {
+    "type": "successfactors",
+    "mapped_url": "https://jobs.intesasanpaolo.com/go/Open-positions-ISP-Company-ISP-%28IT%29/9382801/",
+    "notes": "Portale Annunci Ufficiale SuccessFactors ISP"
+  },
+  "Centrico": {
+    "type": "custom_career",
+    "mapped_url": "https://www.centrico.tech/it/work-with-us.html",
+    "default_location": "Italia",
+    "notes": "Centrico Tech Gruppo Sella"
+  },
+  "Reale Mutua Assicurazioni": {
+    "type": "oracle_cloud",
+    "mapped_url": "https://hcqt.fa.em2.oraclecloud.com/hcmUI/CandidateExperience/it/sites/Reale-Group/jobs",
+    "default_location": "Italia",
+    "notes": "Oracle Cloud HCM Reale Group Italia"
+  },
+  "Fondazione LINKS": {
+    "type": "inrecruiting",
+    "mapped_url": "https://csp-st.intervieweb.it/app.php?module=iframeAnnunci&lang=it&k=88732e4ae02aa60e77ba30968278300c&d=linksfoundation.com",
+    "default_location": "Italia",
+    "notes": "Portale Annunci In-recruiting Fondazione LINKS Italia"
+  },
+  "IIT (Istituto Italiano di Tecnologia)": {
+    "type": "custom_career",
+    "mapped_url": "https://www.iit.it/it/openings",
+    "notes": "Openings IIT Research"
+  },
+  "AI4I": {
+    "type": "ai4i",
+    "mapped_url": "https://ai4i.it/work-with-us/",
+    "default_location": "Italia",
+    "notes": "Istituto Italiano AI per l'Industria Italia"
+  },
+  "Altec": {
+    "type": "custom_career",
+    "mapped_url": "https://www.altecspace.it/it/lavora-con-noi/",
+    "default_location": "Italia",
+    "notes": "Altec Spazio Italia"
+  },
+  "Leonardo S.p.A.": {
+    "type": "workday",
+    "mapped_url": "https://leonardocompany.wd3.myworkdayjobs.com/it-IT/LeonardoCareerSite",
+    "notes": "Workday ATS Leonardo"
+  },
+  "Prima Assicurazioni": {
+    "type": "custom_career",
+    "mapped_url": "https://www.helloprima.com/it/carriere/offerte-lavoro",
+    "notes": "Tech & Data Prima"
+  },
+  "Fondazione Bruno Kessler (FBK)": {
+    "type": "custom_career",
+    "mapped_url": "https://jobs.fbk.eu/cards-annunci?categoria=Opportunit%C3%A0+di+lavoro",
+    "notes": "FBK Research Opportunities"
+  },
+  "Thales Alenia Space": {
+    "type": "workday",
+    "mapped_url": "https://thales.wd3.myworkdayjobs.com/en-US/Careers/jobs?q=thales+alenia+space",
+    "notes": "Workday ATS Thales Alenia Space"
+  },
+  "UnipolTech (LinkedIn Direct)": {
+    "type": "linkedin_search",
+    "mapped_url": "https://www.linkedin.com/jobs/search/?keywords=Unipoltech",
+    "notes": "LinkedIn Jobs Unipoltech"
+  },
+  "Reply Group (LinkedIn Hub)": {
+    "type": "linkedin_search",
+    "mapped_url": "https://www.linkedin.com/jobs/search/?f_C=16291048%2C2092842%2C76134892%2C26956115%2C164507%2C98152663&geoId=103644278",
+    "notes": "Reply, Machine Learning Reply, Data Reply cluster ufficiale"
+  },
+  "CNH Industrial": {
+    "type": "successfactors",
+    "mapped_url": "https://join.cnh.com/search/?q=&",
+    "notes": "CNH Industrial Global Search"
+  },
+  "Stellantis & Comau": {
+    "type": "stellantis",
+    "mapped_url": "https://careers.stellantis.com/job-search-results/",
+    "notes": "Stellantis & Comau Global Careers"
+  },
+  "Teoresi Group": {
+    "type": "custom_career",
+    "mapped_url": "https://job.teoresigroup.com/?lang=it",
+    "default_location": "Italia",
+    "notes": "Teoresi Italia AI & Engineering"
+  },
+  "Michelin": {
+    "type": "custom_career",
+    "mapped_url": "https://jobs.michelin.it/offerte-di-lavoro?criteria=%7B%22jobLocation%22%3A%7B%22level0%22%3A%5B%22clj2qw8yd00080hsdgn607com%22%5D%2C%22level1%22%3A%5B%22vv9rbo568vi7f1dtbq0ltyko%22%2C%22clj2qw8yd00070hsd9itaei90%22%5D%7D%7D&page=1",
+    "default_location": "Italia",
+    "notes": "Michelin Italia & Italia"
+  },
+  "Zucchetti & Tilby": {
+    "type": "inrecruiting",
+    "mapped_url": "https://zucchetti.intervieweb.it/it/career",
+    "notes": "Zucchetti & Tilby In-recruiting ATS"
+  },
+  "TIM": {
+    "type": "custom_career",
+    "mapped_url": "https://timrecruiting.gruppotim.it/",
+    "notes": "TIM Recruiting"
+  },
+  "TIM Retail": {
+    "type": "custom_career",
+    "mapped_url": "https://timretailrecruiting.gruppotim.it/",
+    "notes": "TIM Retail"
+  },
+  "Accenture": {
+    "type": "custom_career",
+    "mapped_url": "https://www.accenture.com/it-it/careers/jobsearch",
+    "notes": "Accenture Careers Search"
+  },
+  "Deloitte": {
+    "type": "avature",
+    "mapped_url": "https://deloittecm.avature.net/en_US/careers/SearchJobs/?729=5946&729_format=1565&listFilterMode=1&jobRecordsPerPage=12",
+    "notes": "Deloitte Avature ATS"
+  },
+  "Capgemini Engineering": {
+    "type": "custom_career",
+    "mapped_url": "https://www.capgemini.com/careers/join-capgemini/job-search/?keyword=capgemini+engineering&size=15&page=1",
+    "notes": "Capgemini Engineering IT"
+  },
+  "PwC": {
+    "type": "workday",
+    "mapped_url": "https://jobs-it.pwc.com/it/en/search-results",
+    "notes": "PwC Italy Career Search"
+  },
+  "NTT DATA": {
+    "type": "custom_career",
+    "mapped_url": "https://it.nttdata.com/career/posizioni-aperte",
+    "notes": "NTT DATA Italia Posizioni Aperte"
+  },
+  "EY": {
+    "type": "successfactors",
+    "mapped_url": "https://careers.ey.com/search/?createNewAlert=false&q=&optionsFacetsDD_customfield1=&optionsFacetsDD_country=&optionsFacetsDD_city=",
+    "notes": "EY Global Careers Search"
+  },
+  "KPMG": {
+    "type": "successfactors",
+    "mapped_url": "https://careers.kpmg.it/search/?createNewAlert=false&q=&optionsFacetsDD_customfield1=&optionsFacetsDD_customfield4=",
+    "notes": "KPMG Italia Search"
+  },
+  "BIP": {
+    "type": "custom_career",
+    "mapped_url": "https://www.bip-group.com/job-openings",
+    "notes": "BIP Job Openings"
+  },
+  "Lutech": {
+    "type": "custom_career",
+    "mapped_url": "https://lutech.group/it/careers/search",
+    "notes": "Lutech Careers Search"
+  },
+  "Alten Italia": {
+    "type": "custom_career",
+    "mapped_url": "https://www.alten.it/career/jobs/",
+    "notes": "Alten Italia Jobs"
+  },
+  "Blue BI": {
+    "type": "custom_career",
+    "mapped_url": "https://www.bluebi.com/lavora-con-noi/",
+    "default_location": "Italia",
+    "notes": "Blue BI Lavora con noi"
+  },
+  "MSC Technology Italia": {
+    "type": "cornerstone",
+    "mapped_url": "https://msc.csod.com/ux/ats/careersite/4/home?c=msc",
+    "default_location": "Italia",
+    "notes": "Cornerstone ATS MSC Italia"
+  },
+  "Almaviva": {
+    "type": "almaviva",
+    "mapped_url": "https://www.almavivagroup.com/it/carriere/lavora-con-noi/posizioni-aperte/italia",
+    "notes": "Almaviva Posizioni Aperte Italia"
+  },
+  "Akkodis": {
+    "type": "akkodis",
+    "mapped_url": "https://www.akkodis.com/it-it/lavora-con-noi/posizioni-aperte",
+    "notes": "Akkodis Italia Posizioni Aperte"
+  },
+  "Dana Incorporated": {
+    "type": "successfactors",
+    "mapped_url": "https://jobs.dana.com/search/?createNewAlert=false&q=&locationsearch=&optionsFacetsDD_country=&optionsFacetsDD_lang=",
+    "notes": "Dana Careers SuccessFactors"
+  },
+  "Ferrero": {
+    "type": "ferrero",
+    "mapped_url": "https://www.ferrerocareers.com/it/it/jobs?_gl=1*m7j8vt*_up*MQ..*_ga*NjA3OTQ1NTY3LjE3OTM4MDk4MDg.*_ga_EE4N0G9QJY*czE3OTM4MDk4MDgkbzEkZzAkdDE3OTM4MDk4MDgkajYwJGwwJGgw",
+    "notes": "Ferrero Careers Italia"
+  },
+  "CSI Piemonte": {
+    "type": "csi_piemonte",
+    "mapped_url": "https://www.csipiemonte.it/it/chi-siamo/azienda/lavora-con-noi/avvisi-di-selezione",
+    "default_location": "Italia",
+    "notes": "CSI Italia Avvisi di Selezione Italia"
+  },
+  "Synesthesia": {
+    "type": "factorial",
+    "mapped_url": "https://synesthesia.it/en/about-us/work-with-us/",
+    "iframe_url": "https://synesthesia.factorial.it/embed/jobs",
+    "default_location": "Italia",
+    "notes": "Synesthesia Italia Factorial ATS"
+  },
+  "Arduino (Qualcomm)": {
+    "type": "qualcomm",
+    "mapped_url": "https://careers.qualcomm.com/careers?domain=qualcomm.com&triggerGoButton=false&query=%23Arduino&start=0&pid=&sort_by=relevance",
+    "notes": "Arduino / Qualcomm Eightfold ATS"
+  },
+  "Gecal Informatica": {
+    "type": "gecal",
+    "mapped_url": "https://www.gecal.it/lavoraconnoi",
+    "default_location": "Italia",
+    "notes": "Gecal Informatica Italia Posizioni Aperte"
+  },
+  "Altair Engineering": {
+    "type": "taleo",
+    "mapped_url": "https://phh.tbe.taleo.net/phh01/ats/careers/v2/searchResults?org=ALTAENGI&cws=39",
+    "notes": "Altair Engineering Oracle Taleo ATS"
+  },
+  "Visualitics": {
+    "type": "visualitics",
+    "mapped_url": "https://visualitics.it/join-our-team/?lang=en",
+    "default_location": "Italia",
+    "notes": "Visualitics Italia Join.com ATS"
+  },
+  "EnginSoft": {
+    "type": "enginsoft",
+    "mapped_url": "https://www.enginsoft.com/careers/",
+    "notes": "EnginSoft Careers"
+  },
+  "aizoon": {
+    "type": "aizoon",
+    "mapped_url": "https://www.aizoongroup.com/careers",
+    "notes": "aizoOn Technology Consulting Careers"
+  },
+  "SPEA": {
+    "type": "spea",
+    "mapped_url": "https://www.spea.com/it/posizioni-aperte/?_gl=1*1p0tfwj*_up*MQ..*_ga*MTk0MjgzODg1Ny4xNzkzODExNzgw*_ga_34QZJ1G7Z2*czE3OTM4MTE3ODAkbzEkZzAkdDE3OTM4MTE3ODAkajYwJGwwJGgw",
+    "default_location": "Italia",
+    "notes": "SPEA Posizioni Aperte Italia Italia"
+  },
+  "Satispay": {
+    "type": "ashby",
+    "mapped_url": "https://jobs.ashbyhq.com/satispay?utm_source=ourpeople",
+    "ashby_board": "satispay",
+    "notes": "Satispay AshbyHQ ATS"
+  },
+  "Docebo": {
+    "type": "docebo",
+    "mapped_url": "https://www.docebo.com/it/lavora-con-noi/#open-roles",
+    "ashby_board": "docebo",
+    "notes": "Docebo Posizioni Aperte con paginazione numerata + AshbyHQ"
+  },
+  "Proxima Group": {
+    "type": "proxima",
+    "mapped_url": "https://proximagroup.eu/join-pro/",
+    "default_location": "Italia",
+    "notes": "Proxima Group Join Pro Italia"
+  },
+  "AGM Solutions": {
+    "type": "agm",
+    "mapped_url": "https://portale.agmsolutions.net/jobs/list?",
+    "default_location": "Italia",
+    "notes": "AGM Solutions Portale Annunci con paginazione numerata"
+  },
+  "F2 Informatica": {
+    "type": "f2informatica",
+    "mapped_url": "https://carriere.f2informatica.it/",
+    "notes": "F2 Informatica Carriere"
+  },
+  "Amaris Consulting": {
+    "type": "amaris",
+    "mapped_url": "https://careers.amaris.com/jobs",
+    "notes": "Amaris Consulting Global Jobs"
+  },
+  "CGM Consulting": {
+    "type": "cgm",
+    "mapped_url": "https://cgmconsulting.it/location_annuncio/torino/?post_types=aol_ad",
+    "default_location": "Italia",
+    "notes": "CGM Consulting Annunci Sede Italia"
+  },
+  "Bit Software Solutions": {
+    "type": "bit_allibo",
+    "mapped_url": "https://bitspa.it/lavora-con-noi/",
+    "default_location": "Italia",
+    "notes": "Bit S.p.A. Italia Allibo ATS"
+  },
+  "Sirma": {
+    "type": "sirma",
+    "mapped_url": "https://careers.sirma.com/jobs",
+    "notes": "Sirma Careers"
+  },
+  "AVL": {
+    "type": "successfactors",
+    "mapped_url": "https://jobs.avl.com/search/?createNewAlert=false&q=&locationsearch=",
+    "landing_url": "https://jobs.avl.com/?locale=en_US&utm_source=careersite&utm_campaign=avl.com",
+    "notes": "AVL SuccessFactors Careers"
+  },
+  "Dumarey": {
+    "type": "dumarey_adp",
+    "mapped_url": "https://dumarey.careers.adp.com/vacancies",
+    "default_location": "Italia",
+    "notes": "Dumarey (ex Punch Italia) ADP Careers"
+  },
+  "Marelli": {
+    "type": "successfactors",
+    "mapped_url": "https://jobs.marelli.com/search/?createNewAlert=false&q=&locationsearch=&optionsFacetsDD_customfield4=&optionsFacetsDD_customfield3=&optionsFacetsDD_country=",
+    "notes": "Marelli SuccessFactors Careers"
+  },
+  "SKF": {
+    "type": "successfactors",
+    "mapped_url": "https://career.skf.com/search/?createNewAlert=false&q=&optionsFacetsDD_location=&optionsFacetsDD_country=&optionsFacetsDD_customfield2=&optionsFacetsDD_department=",
+    "notes": "SKF SuccessFactors Careers con paginazione numerata"
+  },
+  "Gruppo Iren": {
+    "type": "iren",
+    "mapped_url": "https://irenfutura.gruppoiren.it/irenlavoraconnoi/Default.aspx?tabid=188",
+    "notes": "Gruppo Iren Posizioni Aperte"
+  }
+}
