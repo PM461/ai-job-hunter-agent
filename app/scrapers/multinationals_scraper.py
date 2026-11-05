@@ -9,6 +9,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.config import BASE_DIR, load_candidate_config
+from app.database import deterministic_url_id
 from app.site_catalog import get_mapped_sites
 from app.stealth_browser import StealthBrowserManager, human_delay, human_scroll
 from app.ai_matcher import GeminiMatcher
@@ -274,7 +275,7 @@ class MultinationalsScraper:
                         if (workplace.lower() == "remote" or (is_remote and not workplace)) and "remote" not in loc_str.lower():
                             loc_str = f"{loc_str} - Remote"
                         results.append({
-                            "external_id": f"ashby_{board}_{j.get('id', abs(hash(job_url)))}",
+                            "external_id": f"ashby_{board}_{j.get('id') or deterministic_url_id('ashby', job_url)}",
                             "portal": name,
                             "company": name,
                             "title": title[:140],
@@ -302,7 +303,7 @@ class MultinationalsScraper:
                             continue
                         full_url = urllib.parse.urljoin(url, href)
                         results.append({
-                            "external_id": f"proxima_{abs(hash(full_url))}",
+                            "external_id": deterministic_url_id("proxima", full_url),
                             "portal": name,
                             "company": name,
                             "title": title[:140],
@@ -338,7 +339,7 @@ class MultinationalsScraper:
                         if not title:
                             continue
                         results.append({
-                            "external_id": f"dumarey_{vid or abs(hash(title))}",
+                            "external_id": f"dumarey_{vid}" if vid else deterministic_url_id("dumarey", job_url),
                             "portal": name,
                             "company": name,
                             "title": title[:140],
@@ -376,7 +377,7 @@ class MultinationalsScraper:
                         m = re.search(r"(https?://[^\s'\"\\]+)", onclick)
                         job_url = html.unescape(m.group(1)) if m else url
                         results.append({
-                            "external_id": f"bit_{abs(hash(job_url + title))}",
+                            "external_id": deterministic_url_id("bit", job_url),
                             "portal": name,
                             "company": name,
                             "title": title[:140],
@@ -417,7 +418,7 @@ class MultinationalsScraper:
                         continue
                     job_url = f"{url.rstrip('/')}/#{urllib.parse.quote(title.lower().replace(' ', '-'))}"
                     results.append({
-                        "external_id": f"f2_{abs(hash(title))}",
+                        "external_id": deterministic_url_id("f2", job_url),
                         "portal": name,
                         "company": name,
                         "title": title[:140],
@@ -786,7 +787,7 @@ class MultinationalsScraper:
                 continue
 
             seen_urls.add(full_url)
-            ext_id = f"job_{abs(hash(full_url))}"
+            ext_id = deterministic_url_id("job", full_url)
 
             combined_desc = f"{title}\n{txt}\n{card_text}".strip()
 

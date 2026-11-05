@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 from app.config import settings, load_candidate_config
 from app.database import (
     is_job_seen,
+    normalize_job_url,
     save_job,
     update_job_status,
     get_job_by_id,
@@ -37,7 +38,8 @@ class JobAgentOrchestrator:
             if getattr(self, "stop_requested", False):
                 return
             ext_id = raw_job["external_id"]
-            if await is_job_seen(ext_id):
+            job_url = raw_job.get("url", "")
+            if await is_job_seen(ext_id, job_url):
                 return
 
             if len(raw_job.get("description", "")) < 200 and raw_job.get("url", "").startswith("http"):
@@ -77,20 +79,22 @@ class JobAgentOrchestrator:
                 applied_ok = await self.execute_application(raw_job)
                 raw_job["status"] = "AUTO_APPLIED" if applied_ok else "PENDING_APPROVAL"
                 job_db_id = await save_job(raw_job)
-                await self.notifier.notify_job(
-                    raw_job, job_db_id=job_db_id, auto_applied=applied_ok
-                )
-                if applied_ok:
-                    stats["auto_applied"] += 1
-                else:
-                    stats["pending_approval"] += 1
+                if job_db_id is not None:
+                    await self.notifier.notify_job(
+                        raw_job, job_db_id=job_db_id, auto_applied=applied_ok
+                    )
+                    if applied_ok:
+                        stats["auto_applied"] += 1
+                    else:
+                        stats["pending_approval"] += 1
             else:
                 raw_job["status"] = "PENDING_APPROVAL"
                 job_db_id = await save_job(raw_job)
-                await self.notifier.notify_job(
-                    raw_job, job_db_id=job_db_id, auto_applied=False
-                )
-                stats["pending_approval"] += 1
+                if job_db_id is not None:
+                    await self.notifier.notify_job(
+                        raw_job, job_db_id=job_db_id, auto_applied=False
+                    )
+                    stats["pending_approval"] += 1
 
     async def run_hourly_cycle(self, portal_filter: str = "all") -> Dict[str, int]:
         if self.is_running:
@@ -144,9 +148,14 @@ class JobAgentOrchestrator:
                 return stats
 
             all_found: List[Dict[str, Any]] = []
+            seen_batch_urls = set()
             for res in results:
                 if isinstance(res, list):
-                    all_found.extend(res)
+                    for job_item in res:
+                        norm_u = normalize_job_url(job_item.get("url", "")) or job_item.get("external_id", "")
+                        if norm_u and norm_u not in seen_batch_urls:
+                            seen_batch_urls.add(norm_u)
+                            all_found.append(job_item)
                 elif isinstance(res, Exception):
                     logger.error(f"Errore in un canale di scraping: {res}")
 

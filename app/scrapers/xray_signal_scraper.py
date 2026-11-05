@@ -9,6 +9,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.config import DATA_DIR, load_candidate_config
+from app.database import deterministic_url_id
 
 logger = logging.getLogger("JobAgent.XRaySignal")
 
@@ -182,7 +183,7 @@ class XRayScraper:
                                 seen_urls.add(full_url)
 
                                 discovered.append({
-                                    "external_id": f"xray_wd_{abs(hash(full_url))}",
+                                    "external_id": deterministic_url_id("xray_wd", full_url),
                                     "portal": "X-Ray Workday ATS",
                                     "company": comp_name,
                                     "title": title,
@@ -220,7 +221,7 @@ class XRayScraper:
                             seen_urls.add(abs_url)
 
                             discovered.append({
-                                "external_id": f"xray_gh_{j.get('id', abs(hash(abs_url)))}",
+                                "external_id": f"xray_gh_{j.get('id') or deterministic_url_id('gh', abs_url)}",
                                 "portal": "X-Ray Greenhouse ATS",
                                 "company": board.title(),
                                 "title": title,
@@ -273,7 +274,7 @@ class XRayScraper:
                             snippet = snippet_el.get_text(" ", strip=True) if snippet_el else ""
 
                             discovered.append({
-                                "external_id": f"xray_web_{abs(hash(href))}",
+                                "external_id": deterministic_url_id("xray_web", href),
                                 "portal": portal_label,
                                 "company": "Azienda Tech (X-Ray)",
                                 "title": title[:130],
@@ -357,7 +358,7 @@ class SignalScout:
                         if not title or not link:
                             continue
 
-                        sig_id = f"sig_{abs(hash(title[:60]))}"
+                        sig_id = deterministic_url_id("sig", title[:60])
                         if sig_id in seen:
                             continue
 
