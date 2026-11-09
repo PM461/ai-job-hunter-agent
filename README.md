@@ -1,6 +1,6 @@
 # AI Job Hunter & Auto-Apply Agent
 
-Sistema autonomo di ricerca offerte di lavoro, analisi semantica del curriculum vitae tramite modelli linguistici di grandi dimensioni (Google Gemini), monitoraggio multi-portale su oltre 50 aziende e multinazionali, ricerca X-Ray su ATS esterni e gestione interattiva completa tramite Bot Telegram e Dashboard Web.
+Sistema autonomo di ricerca offerte di lavoro, analisi semantica del curriculum vitae tramite modelli linguistici di grandi dimensioni (Google Gemini), monitoraggio multi-portale su oltre 55 aziende e multinazionali, ricerca X-Ray su ATS esterni, suite di **Market Intelligence & Analytics** con **Diagnostica Integrita DOM** e gestione interattiva completa tramite Bot Telegram e Dashboard Web.
 
 ---
 
@@ -27,10 +27,11 @@ AI Job Hunter & Auto-Apply Agent e un'applicazione backend asincrona progettata 
 
 A differenza dei normali aggregatori basati su semplici parole chiave, il sistema:
 - Estrae il testo integrale del Curriculum Vitae in formato PDF del candidato.
-- Esegue scansioni periodiche o su richiesta su LinkedIn, su oltre 50 portali carriere ufficiali di aziende tech/engineering/consulting e su motori di ricerca esterni (X-Ray Search e Signal Scouting).
-- Filtra preventivamente gli annunci in base alle posizioni cercate, al range geografico (singola citta, multi-citta o intera nazione) e alla modalita di lavoro desiderata (remoto, ibrido, in sede).
-- Valuta ogni singola offerta tramite Google Gemini AI producendo un punteggio di compatibilita (0-100%), l'elenco delle competenze possedute e mancanti, la stima della RAL e una nota di accompagnamento (cover note) personalizzata per l'Hiring Manager.
-- Notifica in tempo reale l'utente su Telegram, permettendo di approvare o scartare l'invio della candidatura con un tocco e di riconfigurare dinamicamente ruoli, zone geografiche e filtri senza toccare il codice.
+- Esegue scansioni periodiche o su richiesta su LinkedIn, su oltre 55 portali carriere ufficiali di aziende tech/engineering/consulting e su motori di ricerca esterni (X-Ray Search e Signal Scouting), utilizzando nelle form di ricerca sia le diciture esatte delle posizioni sia le diciture ridotte/scomposte (es. `IA Engineer` -> `IA Engineer`, `AI`, `IA`, `Engineer`).
+- Filtra preventivamente gli annunci in base alle posizioni cercate, al livello di seniority (`Stage`, `Junior`, `Mid`, `Senior`), al range geografico (singola citta, multi-citta o intera nazione) e alla modalita di lavoro desiderata (remoto, ibrido, in sede).
+- Valuta ogni singola offerta tramite Google Gemini AI producendo un punteggio di compatibilita (0-100%), l'elenco delle competenze possedute e mancanti, la rilevazione della RAL e una nota di accompagnamento (cover note) personalizzata per l'Hiring Manager.
+- Verifica automaticamente se i portali aziendali hanno cambiato struttura DOM o se le offerte non sono piu in chiaro, segnalando sulla Dashboard Web `localhost` quando occorre aggiornare uno scraper.
+- Notifica in tempo reale l'utente su Telegram, permettendo di approvare o scartare l'invio della candidatura con un tocco e di riconfigurare dinamicamente ruoli, zone geografiche, seniority e filtri senza toccare il codice.
 
 ---
 
@@ -39,30 +40,33 @@ A differenza dei normali aggregatori basati su semplici parole chiave, il sistem
 Il sistema e suddiviso nei seguenti moduli:
 
 - **Motore di Scraping Multi-Portale (`app/scrapers/multinationals_scraper.py`)**:
-  Interroga oltre 50 portali aziendali utilizzando connettori API diretti (Amazon Jobs API, Stellantis/Comau API, AshbyHQ API, Allibo ATS, ADP API) e sessioni browser headless Playwright con espansione automatica dei pulsanti "Mostra altri / Load More" e navigazione automatica della paginazione numerata (`1, 2, 3, Next`). Supporta nativamente Workday, SAP SuccessFactors, Oracle Cloud HCM, Oracle Taleo, Eightfold AI, Avature, Cornerstone, In-recruiting, Factorial e portali custom.
+  Interroga oltre 55 portali aziendali utilizzando connettori API/DOM dedicati (Amazon Jobs API, Stellantis/Comau API, Accenture, Capgemini, NTT DATA, Prima Assicurazioni, Lutech, BIP, PwC, doppio portale EY Studenti Yello + Esperienza SuccessFactors, Leonardo S.p.A. Workday CXS, WSP, Orbyta, Altherias, Mareum, Shakers, AshbyHQ API, Allibo ATS, ADP API) e sessioni browser headless Playwright con espansione automatica dei pulsanti "Mostra altri / Load More", infinite scroll e navigazione automatica della paginazione numerata (`1, 2, 3, Next`). Supporta nativamente Workday, Phenom People, Yello, Teamtailor, SAP SuccessFactors, Oracle Cloud HCM, Oracle Taleo, Eightfold AI, Avature, Cornerstone, In-recruiting, Factorial e portali custom.
 
-- **Scraper LinkedIn Booleano (`app/scrapers/linkedin_scraper.py`)**:
-  Costruisce query booleane dinamiche combinando i ruoli configurati dall'utente, le citta target e le modalita di lavoro, oltre a interrogare direttamente le pagine offerte delle aziende monitorate tramite sessione persistente autenticata.
+- **Verifica Integrita DOM e Offerte in Chiaro (`verify_page_dom_and_visibility` / `scraper_health`)**:
+  Controlla per ogni portale aziendale se i selettori DOM o gli endpoint API attesi sono ancora presenti e se le offerte risultano leggibili in chiaro. In caso di modifica del DOM o di offerte non piu in chiaro, registra l'anomalia nel database e mostra un avviso sulla Dashboard Web locale (`http://localhost:8000`) indicando quale scraper necessita di aggiornamento.
+
+- **Scraper LinkedIn Booleano e Filtri Nativi (`app/scrapers/linkedin_scraper.py`)**:
+  Combina gli operatori booleani (su diciture esatte e ridotte) con i filtri nativi del portale LinkedIn (`f_WT` per Remoto/Ibrido/In Sede, `f_E` per il livello di esperienza/seniority, `f_TPR` per la data di pubblicazione, `geoId` per la geolocalizzazione e `f_C` per la ricerca diretta sulle aziende target), estraendo anche i dettagli dell'annuncio e l'eventuale Hiring Manager/Recruiter tramite sessione persistente autenticata.
 
 - **Modulo X-Ray ATS & Signal Scouting (`app/scrapers/xray_signal_scraper.py`)**:
-  - *X-Ray ATS*: individua posizioni pubblicate su board Greenhouse, Lever, Workday e AshbyHQ o in post informali pubblicati dagli Hiring Manager sul feed di LinkedIn prima della sponsorizzazione ufficiale.
+  - *X-Ray ATS*: individua posizioni pubblicate su board Greenhouse, Lever, Workday e AshbyHQ o in post informali pubblicati dagli Hiring Manager sul feed di LinkedIn prima della sponsorizzazione ufficiale. Costruisce link di networking verificati (mostrati su Telegram solo quando il nome dell'azienda e realmente identificato).
   - *Signal Scouting*: monitora Google News RSS per intercettare segnali di espansione aziendale (round di finanziamento, apertura nuove sedi, acquisizioni, nuovi appalti) e suggerire candidature spontanee mirate (Reverse Headhunting).
 
 - **Valutatore Semantico AI (`app/ai_matcher.py`)**:
-  Applica un pre-filtro deterministico rapido (escludendo posizioni fuori area geografica, fuori modalita lavorativa o con seniority incompatibile) e invia gli annunci pertinenti a Google Gemini con schema JSON strutturato (`JobEvaluationSchema`).
+  Applica un pre-filtro deterministico rapido (escludendo posizioni fuori area geografica, fuori modalita lavorativa o con seniority incompatibile) e invia gli annunci pertinenti a Google Gemini con schema JSON strutturato (`JobMatchEvaluation`).
 
-- **Orchestratore e Database (`app/orchestrator.py`, `app/database.py`)**:
-  Coordina l'esecuzione concorrente degli scraper, gestisce l'interruzione immediata (`stop_requested`), deduplica gli annunci tramite database locale SQLite asincrono (`aiosqlite`) e smista le candidature automatiche o in attesa di revisione.
+- **Market Intelligence Suite & Dashboard Web (`app/market_analytics.py`, `app/dashboard_ui.py`)**:
+  Espone su `http://localhost:8000` una suite analitica interattiva con **9 grafici Chart.js** (Trend temporale, Storico per azienda, Classifica aziende, Competenze piu richieste, Skill Gap Analysis, Famiglie professionali, Poli geografici e modalita, Seniority di mercato e **RAL Media per Categoria di Posizione**), filtri rapidi per **Seniority** e **Stato Application**, spunta cliccabile per segnare le candidature effettuate, pulsante di **Link Rapido** per ogni offerta, pannello **Diagnostica DOM & Scraper** e scheda **Profilo Su Misura**.
 
-- **Server FastAPI, Scheduler e Bot Telegram (`app/main.py`, `app/notifier.py`)**:
-  Espone una dashboard web locale sulla porta `8000`, pianifica le scansioni automatiche tramite `APScheduler` e gestisce il polling continuo dei comandi e dei pulsanti inline su Telegram.
+- **Orchestratore, Server FastAPI, Scheduler e Bot Telegram (`app/orchestrator.py`, `app/database.py`, `app/main.py`, `app/notifier.py`)**:
+  Coordina l'esecuzione concorrente degli scraper, gestisce l'interruzione immediata (`stop_requested`), deduplica gli annunci tramite database locale SQLite asincrono (`aiosqlite`), pianifica le scansioni automatiche tramite `APScheduler` e gestisce il polling continuo dei comandi e dei pulsanti inline su Telegram.
 
 ---
 
 ## 3. Tecnologie Utilizzate
 
 - **Linguaggio**: Python 3.11+ (programmazione asincrona basata su `asyncio`)
-- **Framework Web e API**: FastAPI, Uvicorn
+- **Framework Web e API**: FastAPI, Uvicorn, Chart.js (Dashboard Analytics)
 - **Intelligenza Artificiale**: Google GenAI SDK (`google-genai`), modelli `gemini-2.5-flash` / `gemini-2.5-pro` con Structured Outputs (Pydantic)
 - **Browser Automation & Web Scraping**: Playwright (Chromium), `playwright-stealth`, HTTPX (client HTTP/2 asincrono), BeautifulSoup4
 - **Database**: SQLite3 con driver asincrono `aiosqlite`
@@ -145,11 +149,11 @@ Aprire il file `.env` e compilare i parametri:
 ### 6.2 Profilo del Candidato (`data/candidate_profile.json`) e Curriculum Vitae
 
 1. Copiare il proprio Curriculum Vitae in formato PDF all'interno della cartella `data/` (ad esempio `data/cv.pdf`).
-2. Aprire `data/candidate_profile.json` e aggiornare la sezione `candidate_profile` con i propri dati anagrafici, recapiti, URL dei profili professionali, formazione, competenze principali (`core_skills`), RAL minima attesa (`expected_salary_ral`), anni minimi di esperienza (`min_years_experience`) e percorso del file PDF (`cv_pdf_path`).
+2. Aprire `data/candidate_profile.json` (oppure utilizzare direttamente la scheda **Profilo Su Misura** nella Dashboard Web `http://localhost:8000`) e aggiornare la sezione `candidate_profile` con i propri dati anagrafici, recapiti, URL dei profili professionali, formazione, competenze principali (`core_skills`), RAL minima attesa (`expected_salary_ral`), anni minimi di esperienza (`min_years_experience`), livelli di seniority accettati (`target_seniority.accepted_tiers`) e percorso del file PDF (`cv_pdf_path`).
 3. Nella sezione `search_preferences` e possibile definire i valori iniziali di:
-   - `keywords`: lista delle posizioni cercate (modificabile in qualsiasi momento da Telegram).
-   - `target_cities`: lista delle citta o aree geografiche di interesse (modificabile da Telegram).
-   - `work_modes`: modalita di lavoro accettate tra `remoto`, `ibrido`, `in_sede` (modificabili da Telegram).
+   - `keywords`: lista delle posizioni cercate (modificabile in qualsiasi momento da Telegram o dalla Dashboard Web).
+   - `target_cities`: lista delle citta o aree geografiche di interesse (modificabile da Telegram o dalla Dashboard Web).
+   - `work_modes`: modalita di lavoro accettate tra `remoto`, `ibrido`, `in_sede` (modificabili da Telegram o dalla Dashboard Web).
 
 ---
 
@@ -172,14 +176,14 @@ python run_server.py
 ```
 
 All'avvio:
-- Il server FastAPI rispondera all'indirizzo `http://localhost:8000` mostrando la Dashboard Web con tutte le offerte analizzate.
+- Il server FastAPI rispondera all'indirizzo `http://localhost:8000` mostrando la Dashboard Web con i 9 grafici di Market Intelligence, la tabella storica con filtro Seniority/Application e link rapido, il pannello **Diagnostica DOM & Scraper** e il configuratore **Profilo Su Misura**.
 - Il Bot Telegram registrera automaticamente i suggerimenti dei comandi nel menu `/` e inviera in chat il messaggio di benvenuto con la guida completa (`/help`) e il pannello interattivo (`/config`).
 
 ---
 
 ## 8. Guida Completa ai Comandi del Bot Telegram
 
-Tutte le impostazioni di ricerca (posizioni lavorative, citta singole o multiple, modalita remoto/ibrido/in sede, RAL, esperienza, orizzonte temporale) possono essere modificate in tempo reale direttamente da Telegram, sia tramite pulsanti interattivi sia tramite comandi testuali.
+Tutte le impostazioni di ricerca (posizioni lavorative, citta singole o multiple, modalita remoto/ibrido/in sede, seniority, RAL, esperienza, orizzonte temporale) possono essere modificate in tempo reale direttamente da Telegram, sia tramite pulsanti interattivi sia tramite comandi testuali.
 
 ### 8.1 Guida e Pannello Principale
 - `/help` oppure `/start` : Mostra la spiegazione completa di tutti i comandi disponibili e apre la tastiera di controllo.
@@ -199,14 +203,18 @@ Tutte le impostazioni di ricerca (posizioni lavorative, citta singole o multiple
 - `/set_zone <c1, c2, ...>` : Imposta da zero il range di citta desiderate (es. `/set_zone Milano, Torino, Roma` oppure `/set_zone Italia` per cercare su tutto il territorio nazionale).
 - `/set_modalita <m1, m2, ...>` : Imposta le modalita di lavoro accettate scegliendo una o piu opzioni tra `remoto`, `ibrido`, `in_sede` (es. `/set_modalita remoto, ibrido`).
 
-### 8.4 Avvio e Arresto delle Scansioni
-- `/scan` : Avvia immediatamente una scansione completa (LinkedIn + X-Ray + tutti i 50 portali aziendali mappati).
-- `/scan_li` : Avvia la scansione booleana e diretta solo su LinkedIn.
+### 8.4 Gestione Livelli di Seniority
+- `/seniority` : Apre il menu interattivo con pulsanti toggle per attivare o disattivare i livelli di seniority accettati (`Stage / Internship`, `Junior / Entry Level`, `Mid-Level / Regular`, `Senior / Lead / Manager`).
+- `/set_seniority <s1, s2, ...>` : Imposta direttamente i livelli di seniority accettati separati da virgola (es. `/set_seniority stage, junior, mid` oppure `/set_seniority junior, mid, senior`).
+
+### 8.5 Avvio e Arresto delle Scansioni
+- `/scan` : Avvia immediatamente una scansione completa (LinkedIn + X-Ray + tutti i portali aziendali mappati).
+- `/scan_li` : Avvia la scansione booleana e con filtri nativi solo su LinkedIn.
 - `/xray` : Avvia la scansione X-Ray sugli ATS esterni (Workday, Greenhouse, Lever, Ashby) e sui post degli Hiring Manager.
 - `/scout` : Avvia il Signal Scouting sulle notizie di espansione aziendale, nuovi round di investimento e aperture sedi.
 - `/stop` : Interrompe in modo sicuro qualsiasi scansione in corso ed emette il riepilogo parziale.
 
-### 8.5 Filtri di Compatibilita, RAL ed Esperienza
+### 8.6 Filtri di Compatibilita, RAL ed Esperienza
 - `/set_ral <cifra>` : Aggiorna la RAL minima desiderata in Euro (es. `/set_ral 35000`).
 - `/set_exp <anni>` : Aggiorna gli anni minimi di esperienza richiesti (es. `/set_exp 0` per includere posizioni entry-level/junior, `/set_exp 2` per profili mid).
 - `/set_min <10-95>` : Modifica la percentuale minima di compatibilita CV richiesta per ricevere una notifica su Telegram (es. `/set_min 70`).
@@ -215,11 +223,11 @@ Tutte le impostazioni di ricerca (posizioni lavorative, citta singole o multiple
 
 ## 9. Elenco Aziende e Portali Configurati
 
-Il file `data/career_sites_mapping.json` include la configurazione pronta all'uso per 50 portali carriere ufficiali:
+Il file `data/career_sites_mapping.json` include la configurazione pronta all'uso per 55 portali carriere ufficiali:
 
 - **Banche, Assicurazioni e Fintech**: Intesa Sanpaolo, Banca Sella, Centrico, Satispay, Reale Mutua Assicurazioni, Prima Assicurazioni, UnipolTech.
-- **Consulenza IT, System Integration e Big4**: Reply Group, Accenture, Deloitte, PwC, EY, KPMG, Capgemini Engineering, NTT DATA, Almaviva, BIP, Lutech, Alten Italia, Akkodis, Amaris Consulting, Engineering, Zucchetti & Tilby, aizoOn, Blue BI, CGM Consulting, F2 Informatica, AGM Solutions, Proxima Group, Sirma, Bit Software Solutions, Gecal Informatica.
-- **Aerospazio, Difesa, Automotive e Industria**: Leonardo S.p.A., Thales Alenia Space, Altec, Stellantis & Comau, CNH Industrial, Marelli, Dumarey, AVL, SKF, Dana Incorporated, Michelin, SPEA,Ferrero, Gruppo Iren.
+- **Consulenza IT, System Integration e Big4**: Reply Group, Accenture, Deloitte, PwC, EY (doppio portale Studenti/Primo Impiego + Esperienza), KPMG, Capgemini Engineering, NTT DATA, Almaviva, BIP, Lutech, Alten Italia, Akkodis, Amaris Consulting, Engineering, Zucchetti & Tilby, Orbyta, Altherias, Mareum, Shakers, aizoOn, Blue BI, CGM Consulting, F2 Informatica, AGM Solutions, Proxima Group, Sirma, Bit Software Solutions, Gecal Informatica.
+- **Aerospazio, Difesa, Automotive, Ingegneria e Industria**: Leonardo S.p.A., Thales Alenia Space, Altec, WSP in Italia, Stellantis & Comau, CNH Industrial, Marelli, Dumarey, AVL, SKF, Dana Incorporated, Michelin, SPEA, Ferrero, Gruppo Iren.
 - **Tech Company, Software Product e Centri di Ricerca**: Amazon, Arduino (Qualcomm), Docebo, Altair Engineering, EnginSoft, Synesthesia, Visualitics, MSC Technology Italia, CSI Piemonte, TIM, TIM Retail, IIT (Istituto Italiano di Tecnologia), Fondazione LINKS, Fondazione Bruno Kessler (FBK), AI4I.
 
 Per aggiungere ulteriori aziende e possibile modificare direttamente `data/career_sites_mapping.json` oppure eseguire l'utility interattiva `python site_mapper.py`.
@@ -232,13 +240,14 @@ Per aggiungere ulteriori aziende e possibile modificare direttamente `data/caree
 2. **Bilanciamento delle Soglie (`REVIEW_THRESHOLD` e `AUTO_APPLY_THRESHOLD`)**: Si consiglia di mantenere `REVIEW_THRESHOLD` intorno a `65-75%` e `AUTO_APPLY_THRESHOLD` a un valore conservativo (`85-90%`), privilegiando l'approvazione manuale tramite il pulsante Telegram per verificare sempre l'offerta prima dell'invio.
 3. **Configurazione Multi-Range Geografica**: Se si cercano opportunita in presenza o ibride su piu poli tecnologici (es. Milano e Torino) insieme a posizioni full-remote da tutta Italia, attivare dal menu `/zone` sia le citta interessate sia le modalita `Remoto`, `Ibrido` e `In Sede`. Se invece si desidera esclusivamente lavoro da remoto, selezionare solo `Remoto` nel menu `/modalita`.
 4. **Intervallo di Scansione Ragionevole**: Impostare `CHECK_INTERVAL_MINUTES` su valori non inferiori a `60` minuti (o superiori, es. `120-240` minuti) per ridurre il consumo di banda, di quota API Gemini e il rischio di rate-limiting da parte dei portali.
-5. **Networking Diretto (Reverse Headhunting)**: Ogni notifica Telegram include link preconfigurati per cercare su LinkedIn gli Hiring Manager, i CTO e i membri del team dell'azienda che ha pubblicato l'annuncio. Contattare direttamente il responsabile allegando la cover note generata dall'AI aumenta sensibilmente il tasso di risposta rispetto al solo invio tramite ATS.
+5. **Networking Diretto (Reverse Headhunting)**: Quando l'azienda dell'annuncio e identificata con certezza, la notifica Telegram include link preconfigurati per cercare su LinkedIn gli Hiring Manager, i CTO e i membri del team. Contattare direttamente il responsabile allegando la cover note generata dall'AI aumenta sensibilmente il tasso di risposta rispetto al solo invio tramite ATS.
+6. **Monitoraggio Diagnostica DOM (`localhost:8000`)**: Consultare periodicamente il banner e la scheda *Diagnostica DOM & Scraper* sulla dashboard web locale per verificare che tutti i portali espongano le offerte in chiaro e individuare tempestivamente eventuali siti che hanno aggiornato il proprio layout HTML.
 
 ---
 
 ## 11. Limiti Tecnici e Operativi
 
-- **Cambiamenti nel DOM dei Portali**: I siti web aziendali e le piattaforme ATS aggiornano periodicamente la propria struttura HTML/CSS. Sebbene lo scraper includa logiche di fallback e connettori API, modifiche strutturali lato server sui siti target possono richiedere l'aggiornamento dei selettori.
+- **Cambiamenti nel DOM dei Portali**: I siti web aziendali e le piattaforme ATS aggiornano periodicamente la propria struttura HTML/CSS. Sebbene lo scraper includa logiche di fallback, connettori API e un modulo automatico di rilevamento cambio DOM (`verify_page_dom_and_visibility`), modifiche strutturali lato server sui siti target possono richiedere l'aggiornamento dei selettori.
 - **Sistemi Anti-Bot e Protezioni Captcha**: Alcuni portali utilizzano sistemi di protezione (Cloudflare, reCAPTCHA, Akamai) o impongono limiti sul numero di richieste per indirizzo IP. Il progetto **non** risolve ne aggira sistemi CAPTCHA o barriere di autenticazione protette.
 - **Invio Automatico delle Candidature (Auto-Apply)**: La compilazione automatica funziona esclusivamente su moduli standard ("Easy Apply" o form ATS basilari con campi nome, cognome, email, telefono e upload CV). I portali che richiedono la creazione manuale di un account dedicato, test psico-attitudinali, codici OTP via email o questionari multi-pagina complessi richiedono il completamento manuale da parte dell'utente tramite il link fornito nella notifica Telegram.
 - **Quote API e Costi di Terze Parti**: L'utilizzo intensivo del modello Google Gemini comporta il consumo dei limiti di richieste (RPM/RPD) previsti dal proprio piano su Google AI Studio. In caso di esaurimento della quota giornaliera, l'agente passa automaticamente a un algoritmo di fallback locale basato sulle keyword fino al ripristino della quota.

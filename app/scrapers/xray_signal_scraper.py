@@ -4,7 +4,7 @@ import re
 import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import httpx
 from bs4 import BeautifulSoup
 
@@ -15,12 +15,74 @@ logger = logging.getLogger("JobAgent.XRaySignal")
 
 SEEN_SIGNALS_FILE: Path = DATA_DIR / "seen_signals.json"
 
+INVALID_COMPANY_PLACEHOLDERS = (
+    "azienda tech",
+    "x-ray",
+    "linkedin company",
+    "azienda non specificata",
+    "post linkedin",
+    "tech / azienda",
+    "unknown",
+    "n/d",
+    "n/a",
+    "confidenziale",
+    "confidential",
+)
 
-def build_networking_links(company: str, city: str = None) -> Dict[str, str]:
+ITALY_GEO_URN = '["103350119"]'
+
+
+def clean_company_for_search(company: str) -> str:
     """
-    Genera link Booleani su LinkedIn (Sezione Persone) e Google X-Ray
-    per trovare Hiring Manager, Colleghi per Referral e Recruiter in base alla configurazione corrente.
+    Pulisce il nome dell'azienda da tag interni (es. '(Exp)', '(X-Ray)', 'S.p.A.', '& ...')
+    e restituisce stringa vuota se il nome è un placeholder generico non ricercabile su LinkedIn.
     """
+    if not company or not isinstance(company, str):
+        return ""
+    raw = company.strip()
+    low = raw.lower()
+    if any(p in low for p in INVALID_COMPANY_PLACEHOLDERS):
+        return ""
+    if low in {"azienda", "company", "lavoro", "italia", "italy", "remote", "remoto"}:
+        return ""
+
+    # Rimuovi note tra parentesi es. "PwC Italia (Exp)" -> "PwC Italia"
+    cleaned = re.sub(r"\([^)]*\)", " ", raw)
+    # Se è una coppia di brand separata da & o / (es. "Zucchetti & Tilby"), usa il brand principale
+    if " & " in cleaned:
+        cleaned = cleaned.split(" & ")[0]
+    elif " / " in cleaned:
+        cleaned = cleaned.split(" / ")[0]
+
+    cleaned = re.sub(
+        r"\b(s\.?r\.?l\.?|s\.?p\.?a\.?|s\.?c\.?a\.?r\.?l\.?|group|gruppo|italia|italy|europe|latam|global|holding|solutions|consulting|informatica|technologies|technology|part of .*)\b",
+        " ",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -–—,.")
+    if len(cleaned) < 2:
+        cleaned = re.sub(r"\([^)]*\)", "", raw).strip()
+    return cleaned if len(cleaned) >= 2 else ""
+
+
+def build_networking_links(
+    company: str,
+    city: str = None,
+    job: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, str]]:
+    """
+    Genera link per la sezione Persone di LinkedIn e Google X-Ray per trovare
+    CTO/Hiring Manager, Colleghi per Referral e Recruiter.
+    Se l'offerta non ha un nome azienda valido/identificabile, restituisce None
+    così da non mostrare tasti non funzionanti su Telegram.
+    """
+    clean_comp = clean_company_for_search(company)
+    direct_recruiter_url = (job or {}).get("recruiter_url") if isinstance(job, dict) else None
+
+    if not clean_comp and not direct_recruiter_url:
+        return None
+
     cfg = load_candidate_config()
     search_prefs = cfg.get("search_preferences", {})
     profile = cfg.get("candidate_profile", {})
@@ -29,46 +91,44 @@ def build_networking_links(company: str, city: str = None) -> Dict[str, str]:
         cities = search_prefs.get("target_cities") or [profile.get("city", "Italia")]
         city = cities[0] if cities else "Italia"
 
-    keywords = search_prefs.get("keywords") or ["AI Engineer", "Machine Learning", "Data Scientist", "Python"]
-    role_clause = " OR ".join(f'"{k}"' for k in keywords[:4])
+    keywords = search_prefs.get("keywords") or ["AI Engineer", "Data Scientist", "Software Engineer", "Python"]
+    primary_role = keywords[0] if keywords else "Software Engineer"
+    secondary_role = keywords[1] if len(keywords) > 1 else "Data Scientist"
 
-    clean_comp = re.sub(
-        r"\b(s\.?r\.?l\.?|s\.?p\.?a\.?|group|italia|italy|europe|latam|part of .*)\b",
-        "",
-        company,
-        flags=re.IGNORECASE,
-    ).strip()
-    if not clean_comp or len(clean_comp) < 2:
-        clean_comp = company.strip()
-
-    hm_query = (
-        f'("Head of AI" OR "CTO" OR "Engineering Manager" OR "Lead Data Scientist" OR "Tech Lead") '
-        f'AND "{clean_comp}" AND "{city}" NOT ("Junior" OR "Stage" OR "Intern")'
-    )
-    hm_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(hm_query)}"
-
-    ref_query = f'({role_clause}) AND "{clean_comp}" AND "{city}"'
-    ref_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(ref_query)}"
-
-    hr_query = (
-        f'("Talent Acquisition" OR "IT Recruiter" OR "HR Business Partner" OR "Recruiter") '
-        f'AND "{clean_comp}" AND ("{city}" OR "Hiring" OR "Assumiamo")'
-    )
-    hr_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(hr_query)}"
-
-    xray_query = (
-        f'site:it.linkedin.com/in/ ("Head of AI" OR "CTO" OR "Talent Acquisition" OR "Tech Lead") '
-        f'"{clean_comp}" "{city}"'
-    )
-    xray_url = f"https://www.google.com/search?q={urllib.parse.quote(xray_query)}"
-
-    return {
-        "hm_url": hm_url,
-        "ref_url": ref_url,
-        "hr_url": hr_url,
-        "xray_url": xray_url,
-        "clean_company": clean_comp,
+    geo_param = urllib.parse.quote(ITALY_GEO_URN)
+    result: Dict[str, str] = {
+        "clean_company": clean_comp or (company or "").strip(),
     }
+
+    if clean_comp:
+        # Query snelle compatibili con il motore /search/results/people/ di LinkedIn + filtro nativo geoUrn Italia
+        hm_kw = f'"{clean_comp}" (CTO OR "Head of" OR "Engineering Manager" OR "Tech Lead")'
+        result["hm_url"] = (
+            f"https://www.linkedin.com/search/results/people/"
+            f"?keywords={urllib.parse.quote(hm_kw)}&geoUrn={geo_param}&origin=FACETED_SEARCH"
+        )
+
+        ref_kw = f'"{clean_comp}" ("{primary_role}" OR "{secondary_role}" OR Engineer OR Developer)'
+        result["ref_url"] = (
+            f"https://www.linkedin.com/search/results/people/"
+            f"?keywords={urllib.parse.quote(ref_kw)}&geoUrn={geo_param}&origin=FACETED_SEARCH"
+        )
+
+        hr_kw = f'"{clean_comp}" ("Talent Acquisition" OR Recruiter OR HR)'
+        result["hr_url"] = direct_recruiter_url or (
+            f"https://www.linkedin.com/search/results/people/"
+            f"?keywords={urllib.parse.quote(hr_kw)}&geoUrn={geo_param}&origin=FACETED_SEARCH"
+        )
+
+        xray_query = (
+            f'site:it.linkedin.com/in/ "{clean_comp}" '
+            f'("CTO" OR "Head of" OR "Talent Acquisition" OR "Tech Lead") "{city}"'
+        )
+        result["xray_url"] = f"https://www.google.com/search?q={urllib.parse.quote(xray_query)}"
+    elif direct_recruiter_url:
+        result["hr_url"] = direct_recruiter_url
+
+    return result
 
 
 def get_boolean_xray_radar_links() -> Dict[str, str]:
@@ -82,40 +142,48 @@ def get_boolean_xray_radar_links() -> Dict[str, str]:
     cities = search_prefs.get("target_cities") or [profile.get("city", "Italia")]
     keywords = search_prefs.get("keywords") or ["AI Engineer", "Machine Learning", "Data Scientist", "Python"]
 
-    city_or = " OR ".join(f'"{c}"' for c in cities[:4])
-    role_or = " OR ".join(f'"{k}"' for k in keywords[:4])
+    primary_city = cities[0] if cities else "Torino"
+    city_or = " OR ".join(f'"{c}"' for c in cities[:3])
+    role_or = " OR ".join(f'"{k}"' for k in keywords[:3])
+    geo_param = urllib.parse.quote(ITALY_GEO_URN)
 
     post_hm_q = (
-        '("stiamo cercando" OR "assumo" OR "stiamo assumendo" OR "we are hiring" OR "cerchiamo un") '
-        f'AND ({role_or}) AND ({city_or} OR "remoto" OR "ibrido")'
+        f'("stiamo cercando" OR "we are hiring" OR "cerchiamo") '
+        f'({role_or}) ({primary_city} OR Italia)'
     )
-    post_hm_url = f"https://www.linkedin.com/search/results/content/?keywords={urllib.parse.quote(post_hm_q)}&sortBy=%22date_posted%22"
+    post_hm_url = (
+        f"https://www.linkedin.com/search/results/content/"
+        f"?keywords={urllib.parse.quote(post_hm_q)}&sortBy=%22date_posted%22&origin=FACETED_SEARCH"
+    )
 
     post_ref_q = (
-        '("conoscete un" OR "cerco per il mio team" OR "unisciti al nostro team" OR "mandatemi il CV") '
-        f'AND ({role_or})'
+        f'("cerco per il mio team" OR "unisciti al nostro team" OR "hiring") '
+        f'({role_or})'
     )
-    post_ref_url = f"https://www.linkedin.com/search/results/content/?keywords={urllib.parse.quote(post_ref_q)}&sortBy=%22date_posted%22"
+    post_ref_url = (
+        f"https://www.linkedin.com/search/results/content/"
+        f"?keywords={urllib.parse.quote(post_ref_q)}&sortBy=%22date_posted%22&origin=FACETED_SEARCH"
+    )
 
-    people_hm_q = (
-        '("Head of AI" OR "Head of Data" OR "CTO" OR "AI Director" OR "Engineering Manager") '
-        f'AND ({city_or}) NOT ("Junior" OR "Stage" OR "Intern")'
+    people_hm_q = f'{primary_city} (CTO OR "Head of AI" OR "Engineering Manager" OR "Tech Lead")'
+    people_hm_url = (
+        f"https://www.linkedin.com/search/results/people/"
+        f"?keywords={urllib.parse.quote(people_hm_q)}&geoUrn={geo_param}&origin=FACETED_SEARCH"
     )
-    people_hm_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(people_hm_q)}"
 
-    people_hr_q = (
-        '("Talent Acquisition" OR "IT Recruiter" OR "HR Business Partner") '
-        f'AND ("Hiring" OR "Assumiamo") AND ({city_or})'
+    people_hr_q = f'{primary_city} ("Talent Acquisition" OR "IT Recruiter" OR "Tech Recruiter")'
+    people_hr_url = (
+        f"https://www.linkedin.com/search/results/people/"
+        f"?keywords={urllib.parse.quote(people_hr_q)}&geoUrn={geo_param}&origin=FACETED_SEARCH"
     )
-    people_hr_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(people_hr_q)}"
 
     xray_ats_q = (
         'site:boards.greenhouse.io OR site:jobs.lever.co OR site:*.teamtailor.com '
-        f'({role_or}) AND ({city_or} OR "Italy" OR "Remote")'
+        f'({role_or}) ({city_or} OR "Italy" OR "Remote")'
     )
     xray_ats_url = f"https://www.google.com/search?q={urllib.parse.quote(xray_ats_q)}"
 
-    xray_wd_q = f'site:myworkdayjobs.com ({role_or}) AND ({city_or})'
+    xray_wd_q = f'site:myworkdayjobs.com ({role_or}) ({city_or})'
     xray_wd_url = f"https://www.google.com/search?q={urllib.parse.quote(xray_wd_q)}"
 
     return {
@@ -182,6 +250,7 @@ class XRayScraper:
                                     continue
                                 seen_urls.add(full_url)
 
+                                posted_on = str(p.get("postedOn") or "")
                                 discovered.append({
                                     "external_id": deterministic_url_id("xray_wd", full_url),
                                     "portal": "X-Ray Workday ATS",
@@ -189,7 +258,8 @@ class XRayScraper:
                                     "title": title,
                                     "location": loc_txt if city_q.lower() in loc_txt.lower() else f"{city_q} ({loc_txt})",
                                     "url": full_url,
-                                    "description": f"{title} presso {comp_name} - Sede: {loc_txt} ({city_q})",
+                                    "published_at": posted_on,
+                                    "description": f"{title} presso {comp_name} - Sede: {loc_txt} ({city_q}) - {posted_on}",
                                     "is_easy_apply": False,
                                 })
                     except Exception as e:
@@ -227,6 +297,7 @@ class XRayScraper:
                                 "title": title,
                                 "location": f"Full Remote Italia ({loc_name})",
                                 "url": abs_url,
+                                "published_at": str(j.get("updated_at") or "")[:10],
                                 "description": f"{title} presso {board.title()} ({loc_name}) - Full Remote in Italia.",
                                 "is_easy_apply": True,
                             })
@@ -273,10 +344,24 @@ class XRayScraper:
                             snippet_el = r.select_one("a.result__snippet, div.result__snippet")
                             snippet = snippet_el.get_text(" ", strip=True) if snippet_el else ""
 
+                            # Tenta di estrarre il nome reale dell'azienda dall'URL ATS (es. jobs.lever.co/azienda)
+                            inferred_comp = "Post LinkedIn (X-Ray)"
+                            parsed_u = urllib.parse.urlparse(href)
+                            host_low = parsed_u.netloc.lower()
+                            path_parts = [p for p in parsed_u.path.strip("/").split("/") if p]
+                            if ("lever.co" in host_low or "greenhouse.io" in host_low) and path_parts:
+                                slug = path_parts[0].replace("-", " ").replace("_", " ").strip()
+                                if slug and slug.lower() not in {"jobs", "boards", "embed", "v1"}:
+                                    inferred_comp = slug.title()
+                            elif "teamtailor.com" in host_low:
+                                sub = host_low.split(".teamtailor.com")[0].split(".")[-1]
+                                if sub and sub not in {"www", "jobs", "career", "careers"}:
+                                    inferred_comp = sub.replace("-", " ").title()
+
                             discovered.append({
                                 "external_id": deterministic_url_id("xray_web", href),
                                 "portal": portal_label,
-                                "company": "Azienda Tech (X-Ray)",
+                                "company": inferred_comp,
                                 "title": title[:130],
                                 "location": f"{primary_city} / Remote Italia",
                                 "url": href,
@@ -377,7 +462,7 @@ class SignalScout:
                             if " - " in title:
                                 detected_entity = title.rsplit(" - ", 1)[-1].strip()
 
-                        net_links = build_networking_links(detected_entity, primary_city)
+                        net_links = build_networking_links(detected_entity, primary_city) or {}
 
                         new_signals.append({
                             "id": sig_id,
@@ -385,9 +470,9 @@ class SignalScout:
                             "url": link,
                             "pub_date": pub_date[:16] if pub_date else "Recente",
                             "entity": detected_entity,
-                            "hm_url": net_links["hm_url"],
-                            "ref_url": net_links["ref_url"],
-                            "xray_url": net_links["xray_url"],
+                            "hm_url": net_links.get("hm_url"),
+                            "ref_url": net_links.get("ref_url"),
+                            "xray_url": net_links.get("xray_url"),
                         })
 
                         if len(new_signals) >= 5:

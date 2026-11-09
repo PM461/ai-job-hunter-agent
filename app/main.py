@@ -2,6 +2,7 @@ import sys
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from typing import List, Dict, Any, Optional
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -12,8 +13,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import httpx
 
 from app.config import settings, load_candidate_config, save_candidate_config, DATA_DIR
-from app.database import init_db, get_recent_jobs, update_job_status
+from app.database import init_db, get_recent_jobs, update_job_status, get_job_by_id, get_scraper_health_summary
 from app.orchestrator import JobAgentOrchestrator
+from app.market_analytics import build_market_analytics_dataset, backfill_published_dates_from_live_apis, invalidate_analytics_cache
+from app.dashboard_ui import render_full_dashboard_html
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,9 +44,9 @@ PRESET_ROLES = [
 ]
 
 PRESET_CITIES = [
+    "Torino",
     "Milano",
     "Roma",
-    "Torino",
     "Bologna",
     "Firenze",
     "Napoli",
@@ -58,6 +61,39 @@ WORK_MODE_LABELS = {
     "ibrido": "🔄 Ibrido",
     "in_sede": "🏢 In Sede",
 }
+
+SENIORITY_TIERS = [
+    ("stage", "🌱 Stage / Internship"),
+    ("junior", "🚀 Junior / Entry Level"),
+    ("mid", "⚡ Mid-Level / Regular"),
+    ("senior", "👑 Senior / Lead / Manager"),
+]
+
+
+def get_active_seniorities(cfg: dict) -> List[str]:
+    target_sen = cfg.get("candidate_profile", {}).get("target_seniority", {})
+    tiers = target_sen.get("accepted_tiers")
+    if tiers is not None:
+        return [t.lower() for t in tiers]
+    rejects = [r.lower() for r in target_sen.get("reject_seniorities", [])]
+    active = ["stage", "junior", "mid"]
+    if not any("senior" in r for r in rejects):
+        active.append("senior")
+    return active
+
+
+def get_seniority_keyboard():
+    cfg = load_candidate_config()
+    active_tiers = get_active_seniorities(cfg)
+    rows = []
+    for tier_key, tier_label in SENIORITY_TIERS:
+        active = tier_key in active_tiers
+        prefix = "✅" if active else "⬜"
+        rows.append([{"text": f"{prefix} {tier_label}", "callback_data": f"sen_tog_{tier_key}"}])
+    rows.append([
+        {"text": "⬅️ Torna al Pannello (/config)", "callback_data": "cfg_refresh"},
+    ])
+    return {"inline_keyboard": rows}
 
 
 async def send_telegram_reply(
@@ -102,6 +138,9 @@ def build_status_summary_text() -> str:
     cities = prefs.get("target_cities", []) or [p.get("city", "Italia")]
     modes = prefs.get("work_modes", ["remoto", "ibrido", "in_sede"])
     modes_str = ", ".join(WORK_MODE_LABELS.get(m, m) for m in modes)
+    active_sen = get_active_seniorities(cfg)
+    sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+    sen_str = " - ".join(sen_labels.get(s, s) for s in active_sen) if active_sen else "Tutte"
     tf_labels = {"today": "Oggi (24h)", "week": "Settimana", "month": "Mese", "all": "Tutto"}
     tf = li.get("time_filter", "month")
 
@@ -110,11 +149,12 @@ def build_status_summary_text() -> str:
         f"💼 *Posizioni Cercate ({len(keywords)}):*\n`{', '.join(keywords)}`\n\n"
         f"📍 *Area di Ricerca ({len(cities)}):*\n`{', '.join(cities)}`\n\n"
         f"🏠 *Modalità Lavoro:* {modes_str}\n"
+        f"🎓 *Seniority Accettata:* *{sen_str}*\n"
         f"💰 *RAL Minima:* *{p.get('expected_salary_ral', '30000')}€*\n"
         f"⏳ *Esperienza Minima:* *{p.get('min_years_experience', 0)} anni*\n"
         f"📅 *Filtro Data LinkedIn:* *{tf_labels.get(tf, tf)}*\n"
         f"🎯 *Soglia Match Notifica:* *{settings.REVIEW_THRESHOLD}%*\n\n"
-        "Usa i pulsanti qui sotto per modificare ruoli, città/modalità o avviare scansioni:"
+        "Usa i pulsanti qui sotto per modificare ruoli, zone, seniority o avviare scansioni:"
     )
 
 
@@ -124,11 +164,14 @@ def build_help_message() -> str:
     keywords = prefs.get("keywords", []) or ["AI Engineer"]
     cities = prefs.get("target_cities", []) or ["Italia"]
     modes = prefs.get("work_modes", ["remoto", "ibrido", "in_sede"])
+    active_sen = get_active_seniorities(cfg)
+    sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+    sen_str = " - ".join(sen_labels.get(s, s) for s in active_sen) if active_sen else "Tutte"
 
     return (
         "📖 *GUIDA COMPLETA COMANDI - AI JOB HUNTER BOT*\n\n"
         "Da questo bot puoi controllare l'intero agente, modificare in tempo reale le posizioni cercate, "
-        "le città (singola o multi-zona) e la modalità di lavoro (Remoto, Ibrido, In Sede).\n\n"
+        "le città (singola o multi-zona), la modalità di lavoro e la seniority target.\n\n"
         "🔹 *1. GESTIONE POSIZIONI / RUOLI CERCATI*\n"
         "• `/ruoli` — Apre il menu interattivo con pulsanti per attivare/disattivare i ruoli\n"
         "• `/add_ruolo <nome>` — Aggiunge una posizione (es. `/add_ruolo Data Analyst`)\n"
@@ -136,20 +179,24 @@ def build_help_message() -> str:
         "• `/set_ruoli <r1, r2, ...>` — Imposta da zero la lista dei ruoli separati da virgola\n"
         f"  _Attuali:_ `{', '.join(keywords)}`\n\n"
         "🔹 *2. GESTIONE AREA GEOGRAFICA E MODALITÀ (MULTI-RANGE)*\n"
-        "• `/zone` — Apre il menu interattivo multi-selezione per Città (Milano, Roma, Bologna, ecc.) e Modalità (Remoto, Ibrido, In Sede)\n"
+        "• `/zone` — Apre il menu interattivo multi-selezione per Città (Torino, Milano, Roma, ecc.) e Modalità (Remoto, Ibrido, In Sede)\n"
         "• `/add_zona <città>` — Aggiunge una città al range (es. `/add_zona Milano`)\n"
-        "• `/del_zona <città>` — Rimuove una città dal range (es. `/del_zona Roma`)\n"
-        "• `/set_zone <c1, c2, ...>` — Sostituisce le città (es. `/set_zone Milano, Roma, Bologna`)\n"
+        "• `/del_zona <città>` — Rimuove una città dal range (es. `/del_zona Torino`)\n"
+        "• `/set_zone <c1, c2, ...>` — Sostituisce le città (es. `/set_zone Torino, Milano, Roma`)\n"
         "• `/modalita` — Apre il selettore rapido Remoto / Ibrido / In Sede\n"
         "• `/set_modalita <m1, m2>` — Imposta le modalità (es. `/set_modalita remoto, ibrido`)\n"
         f"  _Zone attuali:_ `{', '.join(cities)}` | _Modalità:_ `{', '.join(modes)}`\n\n"
-        "🔹 *3. AVVIO E ARRESTO SCANSIONI*\n"
+        "🔹 *3. GESTIONE LIVELLI DI SENIORITY*\n"
+        "• `/seniority` — Apre il menu interattivo per selezionare i livelli accettati (Stage, Junior, Mid, Senior)\n"
+        "• `/set_seniority <s1, s2, ...>` — Imposta i livelli accettati (es. `/set_seniority junior, mid` o `/set_seniority stage, junior, mid, senior`)\n"
+        f"  _Seniority attive:_ `{sen_str}`\n\n"
+        "🔹 *4. AVVIO E ARRESTO SCANSIONI*\n"
         "• `/scan` — Avvia la scansione completa (LinkedIn + X-Ray + 50 portali aziendali)\n"
         "• `/scan_li` — Avvia la scansione Booleana solo su LinkedIn\n"
         "• `/xray` — Cerca negli ATS nascosti (Workday, Greenhouse, Lever) e nei Post degli Hiring Manager\n"
         "• `/scout` — Signal Scouting (notizie su round di finanziamento, nuove aperture, appalti)\n"
         "• `/stop` — Interrompe immediatamente qualsiasi scansione in corso\n\n"
-        "🔹 *4. FILTRI E PARAMETRI CANDIDATO*\n"
+        "🔹 *5. FILTRI E PARAMETRI CANDIDATO*\n"
         "• `/config` — Apre il pannello di controllo principale con tutti i bottoni\n"
         "• `/set_ral <cifra>` — Imposta la RAL minima desiderata (es. `/set_ral 32000`)\n"
         "• `/set_exp <anni>` — Imposta gli anni minimi di esperienza (es. `/set_exp 0`)\n"
@@ -174,6 +221,10 @@ def get_config_keyboard():
     cities = prefs.get("target_cities", []) or [profile.get("city", "Italia")]
     cities_short = ", ".join(cities[:2]) + (f" +{len(cities)-2}" if len(cities) > 2 else "")
 
+    active_sen = get_active_seniorities(cfg)
+    sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+    sen_short = "+".join(sen_labels.get(s, s) for s in active_sen) if active_sen else "Tutte"
+
     is_running = orchestrator.is_running
     scan_rows = (
         [[{"text": "🛑 STOP Scansione in Corso", "callback_data": "cfg_stop_scan"}]]
@@ -193,14 +244,15 @@ def get_config_keyboard():
     return {
         "inline_keyboard": [
             [
-                {"text": f"💼 Posizioni Cercate ({n_roles})", "callback_data": "cfg_menu_roles"},
+                {"text": f"💼 Ruoli ({n_roles})", "callback_data": "cfg_menu_roles"},
                 {"text": f"📍 Zone: {cities_short}", "callback_data": "cfg_menu_zones"},
             ],
             [
+                {"text": f"🎓 Seniority: {sen_short}", "callback_data": "cfg_menu_seniority"},
                 {"text": f"💰 RAL Min: {ral}€", "callback_data": "cfg_prompt_ral"},
-                {"text": f"⏳ Exp Min: {min_exp} anni", "callback_data": "cfg_prompt_exp"},
             ],
             [
+                {"text": f"⏳ Exp Min: {min_exp} anni", "callback_data": "cfg_prompt_exp"},
                 {"text": f"📅 LinkedIn: {tf_labels.get(time_filter, time_filter)}", "callback_data": "cfg_menu_time"},
             ],
             *scan_rows,
@@ -324,6 +376,7 @@ async def register_telegram_commands_and_welcome():
         {"command": "ruoli", "description": "Modifica le posizioni lavorative cercate"},
         {"command": "zone", "description": "Modifica città (Torino, Milano, ecc.) e Ibrido/Remoto"},
         {"command": "modalita", "description": "Seleziona modalità Remoto, Ibrido o In Sede"},
+        {"command": "seniority", "description": "Modifica livelli di seniority (Stage, Junior, Mid, Senior)"},
         {"command": "scan", "description": "Avvia scansione completa (LinkedIn + X-Ray + 50 portali)"},
         {"command": "scan_li", "description": "Avvia scansione solo su LinkedIn"},
         {"command": "xray", "description": "Scova offerte in ATS nascosti e Post Hiring Manager"},
@@ -697,6 +750,80 @@ async def poll_telegram_callbacks():
                                     "• Modalità: `/set_modalita remoto, ibrido` (oppure `remoto, ibrido, in_sede`)",
                                 )
 
+                            elif data == "cfg_menu_seniority":
+                                await client.post(
+                                    f"https://api.telegram.org/bot{token}/answerCallbackQuery",
+                                    json={"callback_query_id": cb_id},
+                                )
+                                cfg = load_candidate_config()
+                                active_sen = get_active_seniorities(cfg)
+                                sen_labels = {"stage": "Stage / Internship", "junior": "Junior / Entry Level", "mid": "Mid-Level / Regular", "senior": "Senior / Lead"}
+                                sen_str = ", ".join(sen_labels.get(s, s) for s in active_sen) or "Nessuna"
+                                text_sen = (
+                                    "🎓 *Gestione Livelli di Seniority*\n\n"
+                                    f"*Livelli Attivi:* `{sen_str}`\n\n"
+                                    "Tocca i pulsanti per *attivare (✅) o disattivare (⬜)* i livelli in tempo reale:\n"
+                                    "_(Gli annunci con seniority disattivata verranno scartati automaticamente)_"
+                                )
+                                await send_telegram_reply(
+                                    client,
+                                    cb_chat_id,
+                                    text_sen,
+                                    reply_markup=get_seniority_keyboard(),
+                                    edit_message_id=cb_msg_id,
+                                )
+
+                            elif data.startswith("sen_tog_"):
+                                tier_key = data.replace("sen_tog_", "").lower()
+                                valid_keys = [t[0] for t in SENIORITY_TIERS]
+                                if tier_key in valid_keys:
+                                    cfg = load_candidate_config()
+                                    target_sen = cfg.setdefault("candidate_profile", {}).setdefault("target_seniority", {})
+                                    active_tiers = get_active_seniorities(cfg)
+                                    if tier_key in active_tiers:
+                                        if len(active_tiers) <= 1:
+                                            await client.post(
+                                                f"https://api.telegram.org/bot{token}/answerCallbackQuery",
+                                                json={"callback_query_id": cb_id, "text": "Deve rimanere almeno 1 livello attivo!"},
+                                            )
+                                            continue
+                                        active_tiers = [t for t in active_tiers if t != tier_key]
+                                        action_msg = f"Disattivato: {tier_key.capitalize()}"
+                                    else:
+                                        active_tiers.append(tier_key)
+                                        action_msg = f"Attivato: {tier_key.capitalize()}"
+
+                                    target_sen["accepted_tiers"] = active_tiers
+                                    if "senior" not in active_tiers:
+                                        target_sen["reject_seniorities"] = ["Senior", "Lead", "Principal", "Staff", "Director", "Head of", "Manager", "VP", "Architect"]
+                                        target_sen["max_years_experience"] = min(target_sen.get("max_years_experience", 3), 3)
+                                    else:
+                                        target_sen["reject_seniorities"] = []
+                                        target_sen["max_years_experience"] = 10
+
+                                    sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+                                    target_sen["level"] = " - ".join(sen_labels.get(t, t) for t in active_tiers)
+                                    save_candidate_config(cfg)
+
+                                    await client.post(
+                                        f"https://api.telegram.org/bot{token}/answerCallbackQuery",
+                                        json={"callback_query_id": cb_id, "text": action_msg},
+                                    )
+                                    sen_full = {"stage": "Stage / Internship", "junior": "Junior / Entry Level", "mid": "Mid-Level / Regular", "senior": "Senior / Lead"}
+                                    sen_str = ", ".join(sen_full.get(s, s) for s in active_tiers)
+                                    text_sen = (
+                                        "🎓 *Gestione Livelli di Seniority*\n\n"
+                                        f"*Livelli Attivi:* `{sen_str}`\n\n"
+                                        "Tocca i pulsanti per *attivare (✅) o disattivare (⬜)* i livelli in tempo reale:"
+                                    )
+                                    await send_telegram_reply(
+                                        client,
+                                        cb_chat_id,
+                                        text_sen,
+                                        reply_markup=get_seniority_keyboard(),
+                                        edit_message_id=cb_msg_id,
+                                    )
+
                             elif data == "cfg_prompt_ral":
                                 await client.post(
                                     f"https://api.telegram.org/bot{token}/answerCallbackQuery",
@@ -1034,6 +1161,62 @@ async def poll_telegram_callbacks():
                                             reply_markup=get_zones_keyboard(),
                                         )
 
+                            elif cmd in ["/seniority", "/seniorities", "/livello", "seniority"]:
+                                cfg = load_candidate_config()
+                                active_sen = get_active_seniorities(cfg)
+                                sen_full = {"stage": "Stage / Internship", "junior": "Junior / Entry Level", "mid": "Mid-Level / Regular", "senior": "Senior / Lead"}
+                                sen_str = ", ".join(sen_full.get(s, s) for s in active_sen) or "Nessuna"
+                                text_sen = (
+                                    "🎓 *Gestione Livelli di Seniority*\n\n"
+                                    f"*Livelli Attivi:* `{sen_str}`\n\n"
+                                    "Tocca i pulsanti sotto per comporre il filtro in tempo reale, "
+                                    "oppure scrivi:\n`/set_seniority junior, mid`\n`/set_seniority stage, junior`"
+                                )
+                                await send_telegram_reply(client, chat_id, text_sen, reply_markup=get_seniority_keyboard())
+
+                            elif cmd == "/set_seniority":
+                                if not arg_str:
+                                    await send_telegram_reply(
+                                        client,
+                                        chat_id,
+                                        "ℹ️ Indica i livelli separati da virgola (`stage`, `junior`, `mid`, `senior`), es:\n"
+                                        "`/set_seniority junior, mid`\n`/set_seniority stage, junior, mid, senior`",
+                                    )
+                                else:
+                                    raw_parts = [p.strip().lower() for p in arg_str.split(",") if p.strip()]
+                                    alias_map = {
+                                        "stage": "stage", "internship": "stage", "tirocinio": "stage", "trainee": "stage",
+                                        "junior": "junior", "entry": "junior", "jr": "junior", "neolaureato": "junior",
+                                        "mid": "mid", "regular": "mid", "middle": "mid",
+                                        "senior": "senior", "lead": "senior", "sr": "senior", "manager": "senior",
+                                    }
+                                    new_tiers = []
+                                    for part in raw_parts:
+                                        matched = alias_map.get(part)
+                                        if matched and matched not in new_tiers:
+                                            new_tiers.append(matched)
+                                    if not new_tiers:
+                                        await send_telegram_reply(client, chat_id, "❌ Nessun livello riconosciuto. Usa: `stage`, `junior`, `mid`, `senior`.")
+                                    else:
+                                        cfg = load_candidate_config()
+                                        target_sen = cfg.setdefault("candidate_profile", {}).setdefault("target_seniority", {})
+                                        target_sen["accepted_tiers"] = new_tiers
+                                        if "senior" not in new_tiers:
+                                            target_sen["reject_seniorities"] = ["Senior", "Lead", "Principal", "Staff", "Director", "Head of", "Manager", "VP", "Architect"]
+                                            target_sen["max_years_experience"] = min(target_sen.get("max_years_experience", 3), 3)
+                                        else:
+                                            target_sen["reject_seniorities"] = []
+                                            target_sen["max_years_experience"] = 10
+                                        sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+                                        target_sen["level"] = " - ".join(sen_labels.get(t, t) for t in new_tiers)
+                                        save_candidate_config(cfg)
+                                        await send_telegram_reply(
+                                            client,
+                                            chat_id,
+                                            f"✅ *Livelli Seniority aggiornati:* `{', '.join(new_tiers)}`",
+                                            reply_markup=get_seniority_keyboard(),
+                                        )
+
                             elif cmd in ["/scout", "scout"]:
                                 asyncio.create_task(orchestrator.run_signal_scouting(ignore_seen=True))
 
@@ -1177,119 +1360,138 @@ async def approve_job_from_dashboard(job_id: int, background_tasks: BackgroundTa
     return {"message": f"Invio candidatura per offerta #{job_id} avviato."}
 
 
+@app.post("/api/jobs/{job_id}/toggle-applied")
+async def toggle_job_applied(job_id: int, request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    is_applied = body.get("applied")
+    job = await get_job_by_id(job_id)
+    if not job:
+        return JSONResponse({"error": "Offerta non trovata"}, status_code=404)
+
+    curr_status = job.get("status") or "DISCOVERED"
+    if is_applied is None:
+        is_applied = curr_status not in ["APPLIED", "AUTO_APPLIED", "APPROVED_APPLIED", "MANUAL_APPLIED"]
+
+    new_status = "MANUAL_APPLIED" if is_applied else "DISCOVERED"
+    await update_job_status(job_id, new_status)
+    invalidate_analytics_cache()
+    return {
+        "status": "ok",
+        "job_id": job_id,
+        "is_applied": is_applied,
+        "new_status": new_status,
+    }
+
+
 @app.get("/api/jobs")
 async def list_jobs():
     return await get_recent_jobs(limit=100)
 
 
+@app.get("/api/analytics")
+async def get_analytics_data(refresh: bool = False):
+    return await build_market_analytics_dataset(force_refresh=refresh)
+
+
+@app.post("/api/analytics/backfill-dates")
+async def trigger_backfill_dates():
+    updated = await backfill_published_dates_from_live_apis()
+    return {"status": "ok", "updated": updated}
+
+
+@app.get("/api/scraper-health")
+async def get_scraper_health_api():
+    """
+    Restituisce lo stato di integrità DOM e visibilità offerte di tutti i portali aziendali,
+    evidenziando se qualche sito ha cambiato DOM o richiede un aggiornamento dello scraper.
+    """
+    return await get_scraper_health_summary()
+
+
+@app.post("/api/scraper-health/check")
+async def run_scraper_dom_check(request: Request):
+    """
+    Avvia una verifica attiva del DOM e della visibilità in chiaro delle offerte su tutti i portali
+    (o su una singola azienda se specificato `{"company": "..."}`).
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target_company = body.get("company")
+    summary = await orchestrator.multinationals.verify_all_portals_dom_health(
+        target_company=target_company
+    )
+    return summary
+
+
+@app.get("/api/profile")
+async def get_candidate_profile_api():
+    """Restituisce la configurazione corrente del profilo e delle preferenze di ricerca."""
+    return load_candidate_config()
+
+
+@app.post("/api/profile")
+async def update_candidate_profile_api(request: Request):
+    """Permette di personalizzare su misura tutti i parametri del candidato e i filtri direttamente dal portale localhost."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Payload JSON non valido"}, status_code=400)
+
+    cfg = load_candidate_config()
+    p = cfg.setdefault("candidate_profile", {})
+    prefs = cfg.setdefault("search_preferences", {})
+    target_sen = p.setdefault("target_seniority", {})
+
+    if "first_name" in body:
+        p["first_name"] = str(body["first_name"]).strip()
+    if "last_name" in body:
+        p["last_name"] = str(body["last_name"]).strip()
+    if "email" in body:
+        p["email"] = str(body["email"]).strip()
+    if "phone" in body:
+        p["phone"] = str(body["phone"]).strip()
+    if "city" in body:
+        p["city"] = str(body["city"]).strip()
+    if "linkedin_url" in body:
+        p["linkedin_url"] = str(body["linkedin_url"]).strip()
+    if "portfolio_or_github_url" in body:
+        p["portfolio_or_github_url"] = str(body["portfolio_or_github_url"]).strip()
+    if "cv_pdf_path" in body:
+        p["cv_pdf_path"] = str(body["cv_pdf_path"]).strip()
+    if "expected_salary_ral" in body:
+        p["expected_salary_ral"] = str(body["expected_salary_ral"]).strip()
+    if "education" in body:
+        p["education"] = str(body["education"]).strip()
+    if "custom_Preferences_notes" in body:
+        p["custom_Preferences_notes"] = str(body["custom_Preferences_notes"]).strip()
+    if "keywords" in body and isinstance(body["keywords"], list):
+        prefs["keywords"] = [str(x).strip() for x in body["keywords"] if str(x).strip()]
+    if "target_cities" in body and isinstance(body["target_cities"], list):
+        prefs["target_cities"] = [str(x).strip() for x in body["target_cities"] if str(x).strip()]
+    if "work_modes" in body and isinstance(body["work_modes"], list):
+        prefs["work_modes"] = [str(x).strip().lower() for x in body["work_modes"] if str(x).strip()]
+    if "accepted_tiers" in body and isinstance(body["accepted_tiers"], list):
+        tiers = [str(x).strip().lower() for x in body["accepted_tiers"] if str(x).strip()]
+        if tiers:
+            target_sen["accepted_tiers"] = tiers
+            sen_labels = {"stage": "Stage", "junior": "Junior", "mid": "Mid", "senior": "Senior"}
+            target_sen["level"] = " - ".join(sen_labels.get(t, t) for t in tiers)
+
+    save_candidate_config(cfg)
+    invalidate_analytics_cache()
+    return {"status": "ok", "message": "Profilo e preferenze salvati con successo!", "config": cfg}
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(request: Request):
+    return HTMLResponse(content=render_full_dashboard_html())
+
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    jobs = await get_recent_jobs(limit=100)
-    full_cfg = load_candidate_config()
-    cfg = full_cfg.get("candidate_profile", {})
-    prefs = full_cfg.get("search_preferences", {})
-    current_ral = cfg.get("expected_salary_ral", "30000")
-    candidate_name = f"{cfg.get('first_name', 'Candidato')} {cfg.get('last_name', '')}".strip()
-    active_cities = ", ".join(prefs.get("target_cities", []) or [cfg.get("city", "Italia")])
-
-    rows_html = ""
-    for j in jobs:
-        score = j.get("match_score") or 0
-        badge_color = (
-            "#10b981"
-            if score >= settings.AUTO_APPLY_THRESHOLD
-            else ("#f59e0b" if score >= settings.REVIEW_THRESHOLD else "#64748b")
-        )
-        status_label = j["status"]
-        ral_display = j.get("estimated_ral") or "Non specificata"
-
-        action_btn = (
-            f"""<button onclick="applyJob({j['id']})" style="padding:6px 12px;cursor:pointer;background:#2563eb;color:white;border:none;border-radius:6px;font-size:12px;">Invia CV</button>"""
-            if score >= settings.REVIEW_THRESHOLD
-            else """<span style="color:#64748b;font-size:12px;">Archiviata</span>"""
-        )
-
-        rows_html += f"""
-        <tr>
-            <td><strong>{j['company']}</strong><br><small style="color:#94a3b8;">{j['portal']}</small></td>
-            <td><a href="{j['url']}" target="_blank" style="color:#38bdf8;text-decoration:none;font-weight:500;">{j['title']}</a><br><small style="color:#94a3b8;">{j['location']}</small></td>
-            <td><span style="color:#10b981;font-weight:600;font-size:13px;">💰 {ral_display}</span></td>
-            <td><span style="background:{badge_color};color:#fff;padding:3px 8px;border-radius:12px;font-weight:bold;font-size:12px;">{score}%</span></td>
-            <td><span style="font-family:monospace;font-size:12px;color:#cbd5e1;">{status_label}</span></td>
-            <td><small style="color:#cbd5e1;line-height:1.3;">{j.get('ai_reasoning', '')[:180]}</small></td>
-            <td>{action_btn}</td>
-        </tr>
-        """
-
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="refresh" content="20">
-        <title>AI Job Hunter - {candidate_name}</title>
-        <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }}
-            .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
-            .stats-bar {{ display: flex; gap: 16px; margin-bottom: 20px; }}
-            .stat-box {{ background: #1e293b; padding: 12px 20px; border-radius: 8px; border: 1px solid #334155; }}
-            .stat-box strong {{ font-size: 18px; color: #38bdf8; }}
-            .card {{ background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-            th {{ text-align: left; padding: 12px 10px; border-bottom: 2px solid #475569; color: #94a3b8; font-size: 13px; text-transform: uppercase; }}
-            td {{ padding: 12px 10px; border-bottom: 1px solid #334155; font-size: 14px; vertical-align: top; }}
-            .btn-primary {{ background: #10b981; color: #fff; padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }}
-            .btn-primary:hover {{ background: #059669; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <div>
-                <h1 style="margin:0 0 6px 0;">🤖 AI Job Hunter & Auto-Apply Agent</h1>
-                <p style="margin:0;color:#94a3b8;">Candidato: <strong>{candidate_name}</strong> • Area: <strong>{active_cities}</strong> • Obiettivo RAL: <strong style="color:#10b981;">{current_ral}€</strong> • Soglia Notifica: <strong>&ge;{settings.REVIEW_THRESHOLD}%</strong></p>
-            </div>
-            <button class="btn-primary" onclick="runNow()">🔍 Avvia Scansione Ora</button>
-        </div>
-
-        <div class="stats-bar">
-            <div class="stat-box">Posizioni Monitorate: <strong>{len(jobs)}</strong></div>
-            <div class="stat-box">In Linea / Da Valutare: <strong>{sum(1 for x in jobs if (x.get('match_score') or 0) >= settings.REVIEW_THRESHOLD)}</strong></div>
-            <div class="stat-box">Comandi Telegram: <code>/help</code> <code>/ruoli</code> <code>/zone</code> <code>/scan</code></div>
-        </div>
-
-        <div class="card">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:18%;">Azienda / Portale</th>
-                        <th style="width:24%;">Ruolo</th>
-                        <th style="width:14%;">RAL (da annuncio)</th>
-                        <th style="width:8%;">Fedeltà</th>
-                        <th style="width:12%;">Stato</th>
-                        <th style="width:18%;">Analisi Gemini AI</th>
-                        <th style="width:6%;">Azione</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows_html or '<tr><td colspan="7" style="text-align:center;padding:30px;">Nessuna posizione archiviata. Avvia la prima scansione.</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-        <script>
-            async function runNow() {{
-                const res = await fetch('/api/run-now', {{ method: 'POST' }});
-                const data = await res.json();
-                alert(data.message);
-                setTimeout(() => location.reload(), 2000);
-            }}
-            async function applyJob(id) {{
-                const res = await fetch('/api/jobs/' + id + '/apply', {{ method: 'POST' }});
-                const data = await res.json();
-                alert(data.message);
-                location.reload();
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html)
+    return HTMLResponse(content=render_full_dashboard_html())

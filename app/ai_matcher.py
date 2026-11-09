@@ -244,13 +244,8 @@ def quick_prefilter(job: Dict[str, Any], candidate_config: dict) -> Tuple[bool, 
         if any(w in full_text for w in ["100% in sede", "esclusivamente in sede", "full onsite"]):
             return False, "Modalità in sede esclusa (richiesto Ibrido o Remoto)"
 
-    # --- 2. STACK ESCLUSO ---
-    excluded_tech = search_prefs.get("excluded_keywords") or [
-        "sap", "abap", "salesforce", "cobol", "php", "wordpress",
-        "java developer", "sviluppatore java", "senior java",
-        ".net developer", "sviluppatore .net", "c# developer",
-        "frontend developer", "react developer", "angular developer",
-    ]
+    # --- 2. STACK ESCLUSO (completamente personalizzabile via `search_preferences.excluded_keywords`) ---
+    excluded_tech = search_prefs.get("excluded_keywords") or []
     active_kw_lower = " ".join(search_prefs.get("keywords", [])).lower()
     for et in excluded_tech:
         # Non escludere una tecnologia se l'utente l'ha aggiunta esplicitamente tra i ruoli cercati!
@@ -261,15 +256,27 @@ def quick_prefilter(job: Dict[str, Any], candidate_config: dict) -> Tuple[bool, 
     target_seniority = candidate_config.get("candidate_profile", {}).get("target_seniority", {})
     max_years = target_seniority.get("max_years_experience", 3)
     min_years_pref = candidate_config.get("candidate_profile", {}).get("min_years_experience", 0)
+    accepted_tiers = [t.lower() for t in target_seniority.get("accepted_tiers", ["stage", "junior", "mid"])]
 
-    reject_seniorities = [
-        s.lower() for s in target_seniority.get(
-            "reject_seniorities",
-            ["senior", "sr.", "lead", "principal", "staff engineer", "head of", "director", "vp ", "manager", "architect"],
-        )
-    ]
-    if any(st in title for st in reject_seniorities):
-        return False, "Seniority esclusa (Senior / Lead / Manager)"
+    if "senior" not in accepted_tiers:
+        reject_seniorities = [
+            s.lower() for s in target_seniority.get(
+                "reject_seniorities",
+                ["senior", "sr.", "lead", "principal", "staff engineer", "head of", "director", "vp ", "manager", "architect"],
+            )
+        ]
+        if any(st in title for st in reject_seniorities):
+            return False, "Seniority esclusa (Senior / Lead / Manager)"
+
+    if "stage" not in accepted_tiers:
+        stage_terms = ["stage", "internship", "intern", "tirocinio", "tirocinante", "trainee", "tesi"]
+        if any(re.search(rf'\b{t}\b', title) for t in stage_terms):
+            return False, "Seniority esclusa (Stage / Internship)"
+
+    if "junior" not in accepted_tiers:
+        jr_terms = ["junior", "entry level", "neolaureat", "neodiplomat", "graduate"]
+        if any(re.search(rf'\b{t}\b', title) for t in jr_terms):
+            return False, "Seniority esclusa (Junior / Entry Level)"
 
     exp_matches = re.findall(
         r'(\d+)\s*(?:\+|\s*-\s*\d+)?\s*(?:anni|years|anno|year)\s*(?:di\s+esperienza|of\s+experience)',

@@ -229,6 +229,14 @@ class JobAgentOrchestrator:
             return 0
 
         for sig in signals:
+            has_net = bool(sig.get("hm_url"))
+            net_text = ""
+            if has_net:
+                net_text = (
+                    f"• 🎯 [Trova CTO / Hiring Manager]({sig['hm_url']})\n"
+                    f"• 🤝 [Trova Colleghi nel Team]({sig['ref_url']})\n"
+                    f"• 🌐 [X-Ray Google senza limiti]({sig['xray_url']})\n"
+                )
             msg = (
                 f"📡 *SEGNALE MERCATO NASCOSTO ({cities})*\n\n"
                 f"🏢 *Realtà / Hub:* {sig['entity']}\n"
@@ -236,23 +244,22 @@ class JobAgentOrchestrator:
                 f"🗓 *Data:* {sig['pub_date']}\n\n"
                 f"💡 *Azione consigliata (Reverse Headhunting):*\n"
                 f"Contatta direttamente i decisori tecnici o chiedi un referral interno citando questa iniziativa prima che aprano le posizioni ufficiali!\n\n"
-                f"• 🎯 [Trova CTO / Hiring Manager]({sig['hm_url']})\n"
-                f"• 🤝 [Trova Colleghi nel Team]({sig['ref_url']})\n"
-                f"• 🌐 [X-Ray Google senza limiti]({sig['xray_url']})\n"
+                f"{net_text}"
                 f"• 🔗 [Leggi Notizia Completa]({sig['url']})"
             )
-            kb = {
-                "inline_keyboard": [
-                    [
-                        {"text": "🎯 CTO / Hiring Manager", "url": sig["hm_url"]},
-                        {"text": "🤝 Team / Referral", "url": sig["ref_url"]},
-                    ],
-                    [
-                        {"text": "🌐 X-Ray Profili", "url": sig["xray_url"]},
-                        {"text": "📰 Apri Notizia", "url": sig["url"]},
-                    ],
-                ]
-            }
+            rows = []
+            if has_net:
+                rows.append([
+                    {"text": "🎯 CTO / Hiring Manager", "url": sig["hm_url"]},
+                    {"text": "🤝 Team / Referral", "url": sig["ref_url"]},
+                ])
+                rows.append([
+                    {"text": "🌐 X-Ray Profili", "url": sig["xray_url"]},
+                    {"text": "📰 Apri Notizia", "url": sig["url"]},
+                ])
+            else:
+                rows.append([{"text": "📰 Apri Notizia", "url": sig["url"]}])
+            kb = {"inline_keyboard": rows}
             await self.notifier.send_simple_telegram_message(msg, reply_markup=kb)
             await asyncio.sleep(0.5)
 

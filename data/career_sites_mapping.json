@@ -7,7 +7,7 @@
   "Amazon Italy": {
     "type": "amazon_portal",
     "mapped_url": "https://amazon.jobs/content/en/locations/italy",
-    "notes": "Amazon Jobs Italia & Lab Italia"
+    "notes": "Amazon Jobs Italia & Lab Torino"
   },
   "Intesa Sanpaolo": {
     "type": "successfactors",
@@ -17,20 +17,20 @@
   "Centrico": {
     "type": "custom_career",
     "mapped_url": "https://www.centrico.tech/it/work-with-us.html",
-    "default_location": "Italia",
+    "default_location": "Torino / Biella",
     "notes": "Centrico Tech Gruppo Sella"
   },
   "Reale Mutua Assicurazioni": {
     "type": "oracle_cloud",
     "mapped_url": "https://hcqt.fa.em2.oraclecloud.com/hcmUI/CandidateExperience/it/sites/Reale-Group/jobs",
-    "default_location": "Italia",
-    "notes": "Oracle Cloud HCM Reale Group Italia"
+    "default_location": "Torino",
+    "notes": "Oracle Cloud HCM Reale Group Torino"
   },
   "Fondazione LINKS": {
     "type": "inrecruiting",
     "mapped_url": "https://csp-st.intervieweb.it/app.php?module=iframeAnnunci&lang=it&k=88732e4ae02aa60e77ba30968278300c&d=linksfoundation.com",
-    "default_location": "Italia",
-    "notes": "Portale Annunci In-recruiting Fondazione LINKS Italia"
+    "default_location": "Torino",
+    "notes": "Portale Annunci In-recruiting Fondazione LINKS Torino"
   },
   "IIT (Istituto Italiano di Tecnologia)": {
     "type": "custom_career",
@@ -40,24 +40,26 @@
   "AI4I": {
     "type": "ai4i",
     "mapped_url": "https://ai4i.it/work-with-us/",
-    "default_location": "Italia",
-    "notes": "Istituto Italiano AI per l'Industria Italia"
+    "default_location": "Torino",
+    "notes": "Istituto Italiano AI per l'Industria Torino"
   },
   "Altec": {
     "type": "custom_career",
     "mapped_url": "https://www.altecspace.it/it/lavora-con-noi/",
-    "default_location": "Italia",
-    "notes": "Altec Spazio Italia"
+    "default_location": "Torino",
+    "notes": "Altec Spazio Torino"
   },
   "Leonardo S.p.A.": {
-    "type": "workday",
+    "type": "leonardo",
     "mapped_url": "https://leonardocompany.wd3.myworkdayjobs.com/it-IT/LeonardoCareerSite",
-    "notes": "Workday ATS Leonardo"
+    "default_location": "Torino / Italia",
+    "notes": "Leonardo S.p.A. Workday con ricerca rapida (diciture esatte + ridotte), filtri Sede/Paese/Uffici (Torino Caselle, C.so Francia, C.so Marche, Roma, Milano, Genova), Categoria d'impiego, Tipo di impiego (seniority) e paginazione numerica"
   },
   "Prima Assicurazioni": {
-    "type": "custom_career",
+    "type": "prima",
     "mapped_url": "https://www.helloprima.com/it/carriere/offerte-lavoro",
-    "notes": "Tech & Data Prima"
+    "default_location": "Milano / Roma / Remoto Italia",
+    "notes": "Prima Assicurazioni con filtri Paese (Italia), Dipartimento, Toggle Remoto e pulsante Mostra di più"
   },
   "Fondazione Bruno Kessler (FBK)": {
     "type": "custom_career",
@@ -92,14 +94,14 @@
   "Teoresi Group": {
     "type": "custom_career",
     "mapped_url": "https://job.teoresigroup.com/?lang=it",
-    "default_location": "Italia",
-    "notes": "Teoresi Italia AI & Engineering"
+    "default_location": "Torino",
+    "notes": "Teoresi Torino AI & Engineering"
   },
   "Michelin": {
     "type": "custom_career",
     "mapped_url": "https://jobs.michelin.it/offerte-di-lavoro?criteria=%7B%22jobLocation%22%3A%7B%22level0%22%3A%5B%22clj2qw8yd00080hsdgn607com%22%5D%2C%22level1%22%3A%5B%22vv9rbo568vi7f1dtbq0ltyko%22%2C%22clj2qw8yd00070hsd9itaei90%22%5D%7D%7D&page=1",
-    "default_location": "Italia",
-    "notes": "Michelin Italia & Italia"
+    "default_location": "Torino",
+    "notes": "Michelin Torino & Piemonte"
   },
   "Zucchetti & Tilby": {
     "type": "inrecruiting",
@@ -117,9 +119,9 @@
     "notes": "TIM Retail"
   },
   "Accenture": {
-    "type": "custom_career",
+    "type": "accenture",
     "mapped_url": "https://www.accenture.com/it-it/careers/jobsearch",
-    "notes": "Accenture Careers Search"
+    "notes": "Accenture ElasticSearch + Faceted Filters (Area of Interest & Location)"
   },
   "Deloitte": {
     "type": "avature",
@@ -127,24 +129,28 @@
     "notes": "Deloitte Avature ATS"
   },
   "Capgemini Engineering": {
-    "type": "custom_career",
-    "mapped_url": "https://www.capgemini.com/careers/join-capgemini/job-search/?keyword=capgemini+engineering&size=15&page=1",
-    "notes": "Capgemini Engineering IT"
+    "type": "capgemini",
+    "mapped_url": "https://www.capgemini.com/it-it/join-us/?page=1&size=11&country_code=it-it",
+    "notes": "Capgemini & Capgemini Engineering IT (Filtri Experience Level, Ruolo, Località + Paginazione)"
   },
   "PwC": {
-    "type": "workday",
+    "type": "pwc",
     "mapped_url": "https://jobs-it.pwc.com/it/en/search-results",
-    "notes": "PwC Italy Career Search"
+    "default_location": "Italia",
+    "notes": "PwC Italy Career Search con ricerca posizione (diciture esatte + ridotte), filtri Category, City, Management Level (seniority), Keywords e paginazione numerica"
   },
   "NTT DATA": {
-    "type": "custom_career",
+    "type": "nttdata",
     "mapped_url": "https://it.nttdata.com/career/posizioni-aperte",
-    "notes": "NTT DATA Italia Posizioni Aperte"
+    "default_location": "Italia",
+    "notes": "NTT DATA Italia con form Search (esatte + ridotte), Topic, Location, Job Family e paginazione"
   },
   "EY": {
-    "type": "successfactors",
-    "mapped_url": "https://careers.ey.com/search/?createNewAlert=false&q=&optionsFacetsDD_customfield1=&optionsFacetsDD_country=&optionsFacetsDD_city=",
-    "notes": "EY Global Careers Search"
+    "type": "ey",
+    "mapped_url": "https://careers.ey.com/ey/search/?createNewAlert=false&q=italia",
+    "student_url": "https://eyglobal.yello.co/job_boards/c1riT--B2O-KySgYWsZO1Q?locale=it",
+    "default_location": "Italia",
+    "notes": "EY Dual Portal: 1) Studenti e Primo Impiego (Yello con keywords, Paese=Italia, Città e infinite scroll) + 2) Lavoratori con Esperienza (SuccessFactors con More options -> Country/Region, City, Search e paginazione numerica)"
   },
   "KPMG": {
     "type": "successfactors",
@@ -152,14 +158,16 @@
     "notes": "KPMG Italia Search"
   },
   "BIP": {
-    "type": "custom_career",
-    "mapped_url": "https://www.bip-group.com/job-openings",
-    "notes": "BIP Job Openings"
+    "type": "bip",
+    "mapped_url": "https://www.bip-group.it/job-openings",
+    "default_location": "Italia",
+    "notes": "BIP Job Openings con filtri Seniority, Location, Search (esatte + ridotte) e paginazione numerata"
   },
   "Lutech": {
-    "type": "custom_career",
+    "type": "lutech",
     "mapped_url": "https://lutech.group/it/careers/search",
-    "notes": "Lutech Careers Search"
+    "default_location": "Italia",
+    "notes": "Lutech Careers Search con 5 selettori (Posizione, Seniority, Modalità, Sede, Settore) e tabella"
   },
   "Alten Italia": {
     "type": "custom_career",
@@ -169,14 +177,14 @@
   "Blue BI": {
     "type": "custom_career",
     "mapped_url": "https://www.bluebi.com/lavora-con-noi/",
-    "default_location": "Italia",
+    "default_location": "Torino",
     "notes": "Blue BI Lavora con noi"
   },
   "MSC Technology Italia": {
     "type": "cornerstone",
     "mapped_url": "https://msc.csod.com/ux/ats/careersite/4/home?c=msc",
-    "default_location": "Italia",
-    "notes": "Cornerstone ATS MSC Italia"
+    "default_location": "Torino",
+    "notes": "Cornerstone ATS MSC Torino"
   },
   "Almaviva": {
     "type": "almaviva",
@@ -201,15 +209,15 @@
   "CSI Piemonte": {
     "type": "csi_piemonte",
     "mapped_url": "https://www.csipiemonte.it/it/chi-siamo/azienda/lavora-con-noi/avvisi-di-selezione",
-    "default_location": "Italia",
-    "notes": "CSI Italia Avvisi di Selezione Italia"
+    "default_location": "Torino",
+    "notes": "CSI Piemonte Avvisi di Selezione Torino"
   },
   "Synesthesia": {
     "type": "factorial",
     "mapped_url": "https://synesthesia.it/en/about-us/work-with-us/",
     "iframe_url": "https://synesthesia.factorial.it/embed/jobs",
-    "default_location": "Italia",
-    "notes": "Synesthesia Italia Factorial ATS"
+    "default_location": "Torino",
+    "notes": "Synesthesia Torino Factorial ATS"
   },
   "Arduino (Qualcomm)": {
     "type": "qualcomm",
@@ -219,8 +227,8 @@
   "Gecal Informatica": {
     "type": "gecal",
     "mapped_url": "https://www.gecal.it/lavoraconnoi",
-    "default_location": "Italia",
-    "notes": "Gecal Informatica Italia Posizioni Aperte"
+    "default_location": "Torino",
+    "notes": "Gecal Informatica Torino Posizioni Aperte"
   },
   "Altair Engineering": {
     "type": "taleo",
@@ -230,8 +238,8 @@
   "Visualitics": {
     "type": "visualitics",
     "mapped_url": "https://visualitics.it/join-our-team/?lang=en",
-    "default_location": "Italia",
-    "notes": "Visualitics Italia Join.com ATS"
+    "default_location": "Torino",
+    "notes": "Visualitics Torino Join.com ATS"
   },
   "EnginSoft": {
     "type": "enginsoft",
@@ -246,8 +254,8 @@
   "SPEA": {
     "type": "spea",
     "mapped_url": "https://www.spea.com/it/posizioni-aperte/?_gl=1*1p0tfwj*_up*MQ..*_ga*MTk0MjgzODg1Ny4xNzkzODExNzgw*_ga_34QZJ1G7Z2*czE3OTM4MTE3ODAkbzEkZzAkdDE3OTM4MTE3ODAkajYwJGwwJGgw",
-    "default_location": "Italia",
-    "notes": "SPEA Posizioni Aperte Italia Italia"
+    "default_location": "Torino (Volpiano)",
+    "notes": "SPEA Posizioni Aperte Volpiano Torino"
   },
   "Satispay": {
     "type": "ashby",
@@ -264,13 +272,13 @@
   "Proxima Group": {
     "type": "proxima",
     "mapped_url": "https://proximagroup.eu/join-pro/",
-    "default_location": "Italia",
-    "notes": "Proxima Group Join Pro Italia"
+    "default_location": "Torino",
+    "notes": "Proxima Group Join Pro Torino"
   },
   "AGM Solutions": {
     "type": "agm",
     "mapped_url": "https://portale.agmsolutions.net/jobs/list?",
-    "default_location": "Italia",
+    "default_location": "Torino",
     "notes": "AGM Solutions Portale Annunci con paginazione numerata"
   },
   "F2 Informatica": {
@@ -286,14 +294,14 @@
   "CGM Consulting": {
     "type": "cgm",
     "mapped_url": "https://cgmconsulting.it/location_annuncio/torino/?post_types=aol_ad",
-    "default_location": "Italia",
-    "notes": "CGM Consulting Annunci Sede Italia"
+    "default_location": "Torino",
+    "notes": "CGM Consulting Annunci Sede Torino"
   },
   "Bit Software Solutions": {
     "type": "bit_allibo",
     "mapped_url": "https://bitspa.it/lavora-con-noi/",
-    "default_location": "Italia",
-    "notes": "Bit S.p.A. Italia Allibo ATS"
+    "default_location": "Torino",
+    "notes": "Bit S.p.A. Torino Allibo ATS"
   },
   "Sirma": {
     "type": "sirma",
@@ -309,8 +317,8 @@
   "Dumarey": {
     "type": "dumarey_adp",
     "mapped_url": "https://dumarey.careers.adp.com/vacancies",
-    "default_location": "Italia",
-    "notes": "Dumarey (ex Punch Italia) ADP Careers"
+    "default_location": "Torino",
+    "notes": "Dumarey (ex Punch Torino) ADP Careers"
   },
   "Marelli": {
     "type": "successfactors",
@@ -326,5 +334,35 @@
     "type": "iren",
     "mapped_url": "https://irenfutura.gruppoiren.it/irenlavoraconnoi/Default.aspx?tabid=188",
     "notes": "Gruppo Iren Posizioni Aperte"
+  },
+  "WSP Italia": {
+    "type": "wsp",
+    "mapped_url": "https://www.wsp.com/it-it/carriere/posizioni-aperte",
+    "default_location": "Italia",
+    "notes": "WSP in Italia con filtro laterale Paese (Italia) e Città"
+  },
+  "Orbyta": {
+    "type": "orbyta",
+    "mapped_url": "https://inrecruiting.intervieweb.it/orbyta/it/career",
+    "default_location": "Torino",
+    "notes": "Orbyta In-recruiting con doppia scheda (Sede e Data) e paginazione AJAX"
+  },
+  "Altherias": {
+    "type": "altherias",
+    "mapped_url": "https://altherias.com/it/carriere/",
+    "default_location": "Italia",
+    "notes": "Altherias Grid Cards Carriere"
+  },
+  "Mareum": {
+    "type": "mareum",
+    "mapped_url": "https://mareum.it/offerte-di-lavoro/",
+    "default_location": "Italia",
+    "notes": "Mareum Grid Cards con paginazione numerata (/page/1..N/)"
+  },
+  "Shakers": {
+    "type": "shakers",
+    "mapped_url": "https://careers.shakersworks.com/jobs",
+    "default_location": "Hybrid / Remote",
+    "notes": "Shakers Teamtailor Grid Jobs"
   }
 }

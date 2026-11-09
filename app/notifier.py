@@ -36,7 +36,24 @@ class NotificationManager:
         )
 
         company = job.get("company") or "Azienda"
-        net = build_networking_links(company)
+        net = build_networking_links(company, job=job)
+
+        net_section = ""
+        if net:
+            lines = [f"🕵️‍♂️ *Reverse Headhunting & Referral ({net.get('clean_company', company)}):*"]
+            if net.get("hm_url"):
+                lines.append(f"• 🎯 [Cerca CTO / Hiring Manager]({net['hm_url']})")
+            if net.get("ref_url"):
+                lines.append(f"• 🤝 [Cerca Colleghi nel Team (Referral)]({net['ref_url']})")
+            hr_line_parts = []
+            if net.get("hr_url"):
+                hr_line_parts.append(f"👩‍💼 [Cerca Recruiter #Hiring]({net['hr_url']})")
+            if net.get("xray_url"):
+                hr_line_parts.append(f"🌐 [X-Ray Profili]({net['xray_url']})")
+            if hr_line_parts:
+                lines.append("• " + " • ".join(hr_line_parts))
+            if len(lines) > 1:
+                net_section = "\n".join(lines) + "\n\n"
 
         text = (
             f"🎯 *Nuova Offerta in Linea ({score}% Fedeltà CV)*\n"
@@ -50,10 +67,7 @@ class NotificationManager:
             f"🟠 *Extra richiesti nell'offerta:* {', '.join(job.get('missing_skills', [])[:5]) or 'Nessuno rilevante'}\n\n"
             f"🧠 *Analisi Gemini AI:*\n_{job.get('ai_reasoning', '')}_\n\n"
             f"✉️ *Messaggio di accompagnamento pronto:*\n`{job.get('tailored_cover_note', '')}`\n\n"
-            f"🕵️‍♂️ *Reverse Headhunting & Referral ({net['clean_company']}):*\n"
-            f"• 🎯 [Cerca CTO / Hiring Manager]({net['hm_url']})\n"
-            f"• 🤝 [Cerca Colleghi nel Team (Referral)]({net['ref_url']})\n"
-            f"• 👩‍💼 [Cerca Recruiter #Hiring]({net['hr_url']}) • 🌐 [X-Ray Profili]({net['xray_url']})\n\n"
+            f"{net_section}"
             f"🔗 [Apri Offerta Originale]({job.get('url')})"
         )
 
@@ -88,14 +102,21 @@ class NotificationManager:
                 },
             ])
         if net_links:
-            keyboard.append([
-                {"text": "🎯 CTO / Hiring Manager", "url": net_links["hm_url"]},
-                {"text": "🤝 Referral Team", "url": net_links["ref_url"]},
-            ])
-            keyboard.append([
-                {"text": "👩‍💼 Recruiter #Hiring", "url": net_links["hr_url"]},
-                {"text": "🌐 X-Ray Google", "url": net_links["xray_url"]},
-            ])
+            row1 = []
+            if net_links.get("hm_url"):
+                row1.append({"text": "🎯 CTO / Hiring Manager", "url": net_links["hm_url"]})
+            if net_links.get("ref_url"):
+                row1.append({"text": "🤝 Referral Team", "url": net_links["ref_url"]})
+            if row1:
+                keyboard.append(row1)
+
+            row2 = []
+            if net_links.get("hr_url"):
+                row2.append({"text": "👩‍💼 Recruiter #Hiring", "url": net_links["hr_url"]})
+            if net_links.get("xray_url"):
+                row2.append({"text": "🌐 X-Ray Google", "url": net_links["xray_url"]})
+            if row2:
+                keyboard.append(row2)
 
         if keyboard:
             payload["reply_markup"] = {"inline_keyboard": keyboard}

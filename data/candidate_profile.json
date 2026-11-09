@@ -43,19 +43,15 @@
     ],
     "short_bio": "Ingegnere del Software e AI con competenze nello sviluppo di applicazioni Machine Learning, LLM/RAG, backend Python e architetture cloud.",
     "target_seniority": {
-      "level": "Junior - Mid",
-      "max_years_experience": 3,
-      "reject_seniorities": [
-        "Senior",
-        "Lead",
-        "Principal",
-        "Staff",
-        "Director",
-        "Head of",
-        "Manager",
-        "VP",
-        "Architect"
+      "level": "Stage - Junior - Mid - Senior",
+      "accepted_tiers": [
+        "stage",
+        "junior",
+        "mid",
+        "senior"
       ],
+      "max_years_experience": 10,
+      "reject_seniorities": [],
       "accept_seniorities": [
         "Junior",
         "Entry Level",
@@ -67,6 +63,7 @@
         "Associate",
         "Mid-level",
         "Mid",
+        "Senior",
         "Software Engineer"
       ]
     }
@@ -96,10 +93,6 @@
     "remote_accepted": true,
     "hybrid_accepted": true,
     "excluded_keywords": [
-      "Senior 10+ years",
-      "Director",
-      "PHP",
-      ".NET Legacy",
       "Call Center",
       "Venditore porta a porta"
     ],
@@ -191,7 +184,12 @@
       "Dumarey",
       "Marelli",
       "SKF",
-      "Gruppo Iren"
+      "Gruppo Iren",
+      "WSP",
+      "Orbyta",
+      "Altherias",
+      "Mareum",
+      "Shakers"
     ]
   },
   "target_portals": {
@@ -287,7 +285,12 @@
         "Dumarey",
         "Marelli",
         "SKF",
-        "Gruppo Iren"
+        "Gruppo Iren",
+        "WSP",
+        "Orbyta",
+        "Altherias",
+        "Mareum",
+        "Shakers"
       ],
       "max_jobs_per_run": 25
     },

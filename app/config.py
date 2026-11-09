@@ -61,7 +61,13 @@ if settings.GEMINI_API_KEY:
 
 def load_candidate_config() -> dict:
     config_path = DATA_DIR / "candidate_profile.json"
+    example_path = DATA_DIR / "candidate_profile.example.json"
     if not config_path.exists():
+        if example_path.exists():
+            with open(example_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            save_candidate_config(data)
+            return data
         return {}
     with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
